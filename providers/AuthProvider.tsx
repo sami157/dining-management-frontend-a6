@@ -47,6 +47,7 @@ type AuthContextValue = {
   loading: boolean;
   appUserLoading: boolean;
   appUserResolved: boolean;
+  setResolvedAppUser: (appUser: AppUser | null) => void;
   createUser: (input: CreateUserInput) => Promise<AppUser>;
   signIn: (email: string, password: string) => Promise<User>;
   signInWithGoogle: () => Promise<User>;
@@ -145,6 +146,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading,
     appUserLoading,
     appUserResolved,
+    setResolvedAppUser: (nextAppUser) => {
+      setAppUser(nextAppUser);
+      setAppUserLoading(false);
+      setAppUserResolved(true);
+    },
     createUser: async ({ name, email, password, mobile, profileImage }) => {
       const credential = await createUserWithEmailAndPassword(auth, email, password);
 

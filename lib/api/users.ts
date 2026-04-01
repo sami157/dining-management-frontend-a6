@@ -1,0 +1,22 @@
+'use client'
+
+import { api } from "@/lib/api/client";
+import { apiRoutes } from "@/lib/api/routes";
+import type { ApiSuccessResponse } from "@/lib/api/types";
+import type { AppUser } from "@/lib/types/app-user";
+
+export type UpdateCurrentUserProfilePayload = {
+  name: string;
+  mobile?: string;
+  profileImage?: string;
+};
+
+export async function updateCurrentUserProfile(
+  payload: UpdateCurrentUserProfilePayload
+) {
+  const response = await api.patch<ApiSuccessResponse<AppUser>>(apiRoutes.users.me, payload, {
+    suppressAuthToast: true,
+  });
+
+  return response.data.data;
+}
