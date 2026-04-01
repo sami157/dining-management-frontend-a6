@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getDashboardRoute } from "@/lib/auth/routes";
 import { useAuth } from "@/providers/AuthProvider";
 
 type RegisterFormValues = {
@@ -26,7 +25,7 @@ type RegisterFormValues = {
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { createUser, refreshAppUser } = useAuth();
+  const { createUser } = useAuth();
   const {
     register,
     handleSubmit,
@@ -43,9 +42,8 @@ export default function RegisterPage() {
   async function onSubmit(values: RegisterFormValues) {
     try {
       await createUser(values);
-      const appUser = await refreshAppUser();
       toast.success("Account created and synced with backend.");
-      router.replace(getDashboardRoute(appUser?.role));
+      router.replace("/");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Registration failed.");
     }

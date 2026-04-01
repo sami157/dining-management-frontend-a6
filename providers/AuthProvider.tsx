@@ -46,7 +46,8 @@ type AuthContextValue = {
   role: UserRole | null;
   loading: boolean;
   appUserLoading: boolean;
-  createUser: (input: CreateUserInput) => Promise<User>;
+  appUserResolved: boolean;
+  createUser: (input: CreateUserInput) => Promise<AppUser>;
   signIn: (email: string, password: string) => Promise<User>;
   signInWithGoogle: () => Promise<User>;
   refreshAppUser: () => Promise<AppUser | null>;
@@ -75,12 +76,15 @@ function deriveEmail(user: User, profile?: SyncProfile) {
 }
 
 function buildRegistrationPayload(user: User, profile?: SyncProfile) {
+  const mobile = profile?.mobile?.trim();
+  const profileImage = profile?.profileImage?.trim() ?? user.photoURL?.trim() ?? undefined;
+
   return {
     firebaseUid: user.uid,
     name: deriveName(user, profile),
     email: deriveEmail(user, profile),
-    mobile: profile?.mobile ?? "",
-    profileImage: profile?.profileImage ?? user.photoURL ?? "",
+    ...(mobile ? { mobile } : {}),
+    ...(profileImage ? { profileImage } : {}),
   };
 }
 
@@ -89,13 +93,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [appUser, setAppUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [appUserLoading, setAppUserLoading] = useState(false);
+  const [appUserResolved, setAppUserResolved] = useState(false);
 
   const syncUser = useCallback(async (firebaseUser: User, profile?: SyncProfile) => {
     setAppUserLoading(true);
+    setAppUserResolved(false);
 
     try {
       try {
-        const currentAppUser = await getCurrentAppUser();
+        const currentAppUser = await getCurrentAppUser(firebaseUser);
         setAppUser(currentAppUser);
         return currentAppUser;
       } catch (error) {
@@ -103,34 +109,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           throw error;
         }
 
-        await registerAppUser(buildRegistrationPayload(firebaseUser, profile));
-        const currentAppUser = await getCurrentAppUser();
+        await registerAppUser(buildRegistrationPayload(firebaseUser, profile), firebaseUser);
+        const currentAppUser = await getCurrentAppUser(firebaseUser);
         setAppUser(currentAppUser);
         return currentAppUser;
       }
     } finally {
       setAppUserLoading(false);
+      setAppUserResolved(true);
     }
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
 
       if (!currentUser) {
         setAppUser(null);
         setAppUserLoading(false);
+        setAppUserResolved(true);
         setLoading(false);
         return;
       }
 
-      try {
-        await syncUser(currentUser);
-      } catch {
-        setAppUser(null);
-      } finally {
-        setLoading(false);
-      }
+      setLoading(false);
     });
 
     return unsubscribe;
@@ -142,6 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     role: appUser?.role ?? null,
     loading,
     appUserLoading,
+    appUserResolved,
     createUser: async ({ name, email, password, mobile, profileImage }) => {
       const credential = await createUserWithEmailAndPassword(auth, email, password);
 
@@ -151,29 +154,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       setUser(credential.user);
-      await syncUser(credential.user, { name, email, mobile, profileImage });
+      const registeredAppUser = await registerAppUser(
+        buildRegistrationPayload(credential.user, {
+          name,
+          email,
+          mobile,
+          profileImage,
+        }),
+        credential.user
+      );
+      setAppUser(registeredAppUser);
+      setAppUserLoading(false);
+      setAppUserResolved(true);
 
-      return credential.user;
+      return registeredAppUser;
     },
     signIn: async (email, password) => {
       const credential = await signInWithEmailAndPassword(auth, email, password);
 
       setUser(credential.user);
-      await syncUser(credential.user, { email });
-
+      setAppUser(null);
+      setAppUserLoading(false);
+      setAppUserResolved(true);
       return credential.user;
     },
     signInWithGoogle: async () => {
       const credential = await signInWithPopup(auth, googleProvider);
 
       setUser(credential.user);
-      await syncUser(credential.user);
-
+      setAppUser(null);
+      setAppUserLoading(false);
+      setAppUserResolved(true);
       return credential.user;
     },
     refreshAppUser: async () => {
       if (!auth.currentUser) {
         setAppUser(null);
+        setAppUserResolved(true);
         return null;
       }
 
@@ -184,6 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
       setAppUser(null);
       setAppUserLoading(false);
+      setAppUserResolved(true);
     },
   };
 

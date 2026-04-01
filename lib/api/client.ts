@@ -7,11 +7,11 @@ import type { ApiErrorResponse } from "@/lib/api/types";
 
 declare module "axios" {
   interface AxiosRequestConfig {
-    auth?: boolean;
+    suppressAuthToast?: boolean;
   }
 
   interface InternalAxiosRequestConfig {
-    auth?: boolean;
+    suppressAuthToast?: boolean;
   }
 }
 
@@ -30,13 +30,11 @@ const api = axios.create({
 
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
-    if (!config.auth) {
-      return config;
-    }
-
     const authHeader = await getAuthHeader();
 
-    config.headers.set("Authorization", authHeader.Authorization);
+    if (authHeader) {
+      config.headers.set("Authorization", authHeader.Authorization);
+    }
 
     return config;
   },
@@ -47,12 +45,17 @@ api.interceptors.response.use(
   (response) => response,
   (error: AxiosError<ApiErrorResponse>) => {
     const status = error.response?.status;
+    const suppressAuthToast = error.config?.suppressAuthToast;
+    const validationMessage = error.response?.data?.errorSources?.[0]?.message;
     const message =
-      error.response?.data?.message ?? error.message ?? "Request failed";
+      validationMessage ??
+      error.response?.data?.message ??
+      error.message ??
+      "Request failed";
 
-    if (status === 401) {
+    if (status === 401 && !suppressAuthToast) {
       toast.error("Your session is missing or expired. Please sign in again.");
-    } else if (status === 403) {
+    } else if (status === 403 && !suppressAuthToast) {
       toast.error("You do not have permission to perform this action.");
     }
 

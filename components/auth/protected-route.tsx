@@ -18,7 +18,7 @@ export function ProtectedRoute({
 }: ProtectedRouteProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, role, appUser, loading, appUserLoading } = useAuth();
+  const { user, role, appUser, loading, appUserLoading, appUserResolved } = useAuth();
 
   useEffect(() => {
     if (loading || appUserLoading) {
@@ -30,15 +30,17 @@ export function ProtectedRoute({
       return;
     }
 
-    if (!appUser) {
-      router.replace("/");
-      return;
-    }
+    if (allowedRoles) {
+      if (!role) {
+        router.replace("/");
+        return;
+      }
 
-    if (allowedRoles && role && !allowedRoles.includes(role)) {
-      router.replace(getDashboardRoute(role));
+      if (!allowedRoles.includes(role)) {
+        router.replace(getDashboardRoute(role));
+      }
     }
-  }, [allowedRoles, appUser, appUserLoading, loading, pathname, role, router, user]);
+  }, [allowedRoles, appUserLoading, loading, pathname, role, router, user]);
 
   if (loading || appUserLoading) {
     return <LoadingState label="Checking access..." />;
@@ -48,7 +50,11 @@ export function ProtectedRoute({
     return <LoadingState label="Redirecting to login..." />;
   }
 
-  if (!appUser) {
+  if (allowedRoles && !role && appUserResolved) {
+    return <LoadingState label="We couldn't verify your access." />;
+  }
+
+  if (allowedRoles && !appUser) {
     return <LoadingState label="Resolving your profile..." />;
   }
 

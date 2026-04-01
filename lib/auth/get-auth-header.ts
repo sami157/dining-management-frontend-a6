@@ -1,15 +1,16 @@
 'use client'
 
+import type { User } from "firebase/auth";
 import { auth } from "@/firebase/firebase.init";
 
-export async function getAuthHeader() {
-  const user = auth.currentUser;
+export async function getAuthHeader(user?: User | null) {
+  const activeUser = user ?? auth.currentUser;
 
-  if (!user) {
-    throw new Error("User is not signed in");
+  if (!activeUser) {
+    return null;
   }
 
-  const token = await user.getIdToken();
+  const token = await activeUser.getIdToken();
 
   return {
     Authorization: `Bearer ${token}`,
