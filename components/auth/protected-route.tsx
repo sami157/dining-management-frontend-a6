@@ -1,5 +1,6 @@
 'use client'
 
+import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { LoadingState } from "@/components/shared/loading-state";
@@ -7,15 +8,45 @@ import { getDashboardRoute } from "@/lib/auth/routes";
 import type { UserRole } from "@/lib/types/app-user";
 import { useAuth } from "@/providers/AuthProvider";
 
-type ProtectedRouteProps = {
-  children: React.ReactNode;
-  allowedRoles?: UserRole[];
+type AuthProtectedRouteProps = {
+  children: ReactNode;
 };
 
-export function ProtectedRoute({
+type RoleProtectedRouteProps = {
+  children: ReactNode;
+  allowedRoles: UserRole[];
+};
+
+export function AuthProtectedRoute({ children }: AuthProtectedRouteProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const { user, loading } = useAuth();
+
+  useEffect(() => {
+    if (loading) {
+      return;
+    }
+
+    if (!user) {
+      router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+    }
+  }, [loading, pathname, router, user]);
+
+  if (loading) {
+    return <LoadingState label="Checking access..." />;
+  }
+
+  if (!user) {
+    return <LoadingState label="Redirecting to login..." />;
+  }
+
+  return <>{children}</>;
+}
+
+export function RoleProtectedRoute({
   children,
   allowedRoles,
-}: ProtectedRouteProps) {
+}: RoleProtectedRouteProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { user, role, appUser, loading, appUserLoading, appUserResolved } = useAuth();
@@ -30,15 +61,13 @@ export function ProtectedRoute({
       return;
     }
 
-    if (allowedRoles) {
-      if (!role) {
-        router.replace("/");
-        return;
-      }
+    if (!role) {
+      router.replace("/");
+      return;
+    }
 
-      if (!allowedRoles.includes(role)) {
-        router.replace(getDashboardRoute(role));
-      }
+    if (!allowedRoles.includes(role)) {
+      router.replace(getDashboardRoute(role));
     }
   }, [allowedRoles, appUserLoading, loading, pathname, role, router, user]);
 
@@ -50,15 +79,15 @@ export function ProtectedRoute({
     return <LoadingState label="Redirecting to login..." />;
   }
 
-  if (allowedRoles && !role && appUserResolved) {
+  if (!role && appUserResolved) {
     return <LoadingState label="We couldn't verify your access." />;
   }
 
-  if (allowedRoles && !appUser) {
+  if (!appUser) {
     return <LoadingState label="Resolving your profile..." />;
   }
 
-  if (allowedRoles && role && !allowedRoles.includes(role)) {
+  if (!allowedRoles.includes(role!)) {
     return <LoadingState label="Redirecting to your dashboard..." />;
   }
 
