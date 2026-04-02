@@ -36,11 +36,11 @@ export function SiteHeader() {
     <header className="border-b border-border/80 bg-background/88 backdrop-blur">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-6 px-6 py-4">
         <Link href="/" className="flex flex-col">
-          <span className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-            Dining Management
+          <span className="font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+            Dining
           </span>
-          <span className="title-font text-lg text-foreground">
-            Shadcn Frontend
+          <span className="font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+            Management
           </span>
         </Link>
 
