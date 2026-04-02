@@ -6,7 +6,7 @@ export function PageIntro({
   description,
   className,
 }: {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   description: string;
   className?: string;
