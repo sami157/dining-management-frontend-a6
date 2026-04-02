@@ -50,8 +50,8 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="flex flex-1 items-center justify-center bg-zinc-100 px-6 py-16">
-      <Card className="w-full max-w-lg border-white/70 bg-white/95 shadow-xl shadow-zinc-300/35">
+    <main className="bg-shell flex flex-1 items-center justify-center px-6 py-16">
+      <Card className="w-full max-w-lg border-white/60 bg-card/94">
         <CardHeader>
           <CardTitle>Create account</CardTitle>
           <CardDescription>
@@ -71,7 +71,7 @@ export default function RegisterPage() {
                   })}
                 />
                 {errors.name ? (
-                  <p className="text-sm text-rose-600">{errors.name.message}</p>
+                  <p className="text-sm text-destructive">{errors.name.message}</p>
                 ) : null}
               </div>
 
@@ -92,7 +92,7 @@ export default function RegisterPage() {
                 })}
               />
               {errors.email ? (
-                <p className="text-sm text-rose-600">{errors.email.message}</p>
+                <p className="text-sm text-destructive">{errors.email.message}</p>
               ) : null}
             </div>
 
@@ -111,7 +111,7 @@ export default function RegisterPage() {
                 })}
               />
               {errors.password ? (
-                <p className="text-sm text-rose-600">{errors.password.message}</p>
+                <p className="text-sm text-destructive">{errors.password.message}</p>
               ) : null}
             </div>
 
@@ -120,9 +120,9 @@ export default function RegisterPage() {
             </Button>
           </form>
 
-          <p className="mt-4 text-sm text-zinc-600">
+          <p className="mt-4 text-sm text-muted-foreground">
             Already have an account?{" "}
-            <Link href="/login" className="font-medium text-zinc-950 underline">
+            <Link href="/login" className="font-medium text-primary-foreground underline">
               Sign in
             </Link>
           </p>

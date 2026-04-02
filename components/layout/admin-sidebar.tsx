@@ -20,13 +20,13 @@ export function AdminSidebar() {
   const { appUser, logOut } = useAuth();
 
   return (
-    <aside className="flex w-full flex-col border-b border-zinc-200 bg-white lg:min-h-screen lg:w-72 lg:border-b-0 lg:border-r">
-      <div className="space-y-2 border-b border-zinc-200 px-6 py-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-zinc-500">
+    <aside className="flex w-full flex-col border-b border-border bg-card/92 lg:min-h-screen lg:w-72 lg:border-b-0 lg:border-r">
+      <div className="space-y-2 border-b border-border px-6 py-6">
+        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
           Control Center
         </p>
-        <h2 className="text-2xl font-semibold text-zinc-950">Admin Dashboard</h2>
-        <p className="text-sm text-zinc-600">
+        <h2 className="title-font text-2xl text-foreground">Admin Dashboard</h2>
+        <p className="text-sm text-muted-foreground">
           Signed in as {appUser?.name ?? "User"} ({appUser?.role ?? "Unknown"})
         </p>
       </div>
@@ -41,10 +41,10 @@ export function AdminSidebar() {
               key={link.href}
               href={link.href}
               className={cn(
-                "rounded-2xl px-4 py-3 text-sm font-medium transition",
+                "rounded-[calc(var(--radius)+0.25rem)] px-4 py-3 text-sm font-medium transition",
                 active
-                  ? "bg-zinc-950 text-white"
-                  : "text-zinc-700 hover:bg-zinc-100"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-foreground/72 hover:bg-secondary/45"
               )}
             >
               {link.label}

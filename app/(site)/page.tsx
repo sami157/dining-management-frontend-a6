@@ -30,21 +30,24 @@ export default function HomePage() {
   const { user, appUser } = useAuth();
 
   return (
-    <main className="flex-1 bg-[radial-gradient(circle_at_top,_#ffffff,_#f4f4f5_50%,_#e4e4e7)]">
+    <main className="bg-shell flex-1">
       <section className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-16">
         <div className="grid gap-10 lg:grid-cols-[1.25fr_0.85fr] lg:items-center">
           <div className="space-y-6">
             <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
                 Dining Management
               </p>
-              <h1 className="max-w-3xl text-5xl font-semibold tracking-tight text-zinc-950">
-                App shell, auth sync, and role-aware routes are now the foundation.
+              <h1 className="title-font max-w-3xl text-5xl tracking-tight text-foreground">
+                Shadcn now carries the same warm dining-system identity.
               </h1>
-              <p className="max-w-2xl text-base leading-8 text-zinc-600">
-                This scaffold follows the routing reference, keeps Firebase auth client-side,
-                syncs authenticated users with the backend, and prepares protected sections
-                for member and admin workflows.
+              <p className="max-w-2xl text-base leading-8 text-muted-foreground">
+                The palette, rounded controls, expressive typography, and shared utilities from
+                the separate daisyUI frontend are now mapped into shadcn tokens for this App
+                Router codebase.
+              </p>
+              <p className="bangla-text max-w-2xl text-lg leading-8 text-foreground/78">
+                একই ভিজ্যুয়াল মুড এখন shadcn কম্পোনেন্ট দিয়েই চালানো যাবে।
               </p>
             </div>
 
@@ -68,15 +71,15 @@ export default function HomePage() {
             </div>
           </div>
 
-          <Card className="border-white/70 bg-white/90 shadow-xl shadow-zinc-300/35">
+          <Card className="border-white/60 bg-card/88">
             <CardHeader>
-              <CardTitle className="text-xl">Current foundation</CardTitle>
+              <CardTitle className="text-xl">Theme foundation</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4 text-sm text-zinc-600">
-              <p>Shared site shell and admin dashboard shell</p>
-              <p>Firebase auth context with backend `/users/me` hydration</p>
-              <p>Client guards for authenticated and role-restricted routes</p>
-              <p>Axios client with Firebase bearer token injection</p>
+            <CardContent className="space-y-4 text-sm text-muted-foreground">
+              <p>Shadcn tokens now mirror the separate daisyUI palette.</p>
+              <p>Shared buttons, cards, inputs, and labels inherit the updated theme.</p>
+              <p>Title and Bangla helper fonts are available across routes.</p>
+              <p>Animated and background utilities moved into the global stylesheet.</p>
             </CardContent>
           </Card>
         </div>
@@ -86,15 +89,15 @@ export default function HomePage() {
             const Icon = feature.icon;
 
             return (
-              <Card key={feature.title} className="border-zinc-200/80 bg-white/90">
+              <Card key={feature.title} className="bg-card/90">
                 <CardHeader className="space-y-4">
-                  <div className="flex size-12 items-center justify-center rounded-2xl bg-zinc-950 text-white">
+                  <div className="flex size-12 items-center justify-center rounded-[calc(var(--radius)+0.5rem)] bg-accent text-accent-foreground">
                     <Icon className="size-5" />
                   </div>
                   <CardTitle className="text-xl">{feature.title}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm leading-6 text-zinc-600">{feature.description}</p>
+                  <p className="text-sm leading-6 text-muted-foreground">{feature.description}</p>
                 </CardContent>
               </Card>
             );

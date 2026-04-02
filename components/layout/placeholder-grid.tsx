@@ -13,7 +13,7 @@ export function PlaceholderGrid({
             <CardTitle className="text-lg">{item.title}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm leading-6 text-zinc-600">{item.description}</p>
+            <p className="text-sm leading-6 text-muted-foreground">{item.description}</p>
           </CardContent>
         </Card>
       ))}

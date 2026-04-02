@@ -9,7 +9,7 @@ export default function AdminDashboardLayout({
 }) {
   return (
     <RoleProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
-      <div className="flex flex-1 flex-col bg-zinc-100 lg:flex-row">
+      <div className="bg-shell flex flex-1 flex-col lg:flex-row">
         <AdminSidebar />
         <main className="flex-1 px-6 py-8">{children}</main>
       </div>

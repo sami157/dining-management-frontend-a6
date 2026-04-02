@@ -33,14 +33,14 @@ export function SiteHeader() {
     : guestLinks;
 
   return (
-    <header className="border-b border-zinc-200/80 bg-white/90 backdrop-blur">
+    <header className="border-b border-border/80 bg-background/88 backdrop-blur">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-6 px-6 py-4">
         <Link href="/" className="flex flex-col">
-          <span className="text-xs font-semibold uppercase tracking-[0.28em] text-zinc-500">
+          <span className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
             Dining Management
           </span>
-          <span className="text-lg font-semibold text-zinc-950">
-            App Router Frontend
+          <span className="title-font text-lg text-foreground">
+            Shadcn Frontend
           </span>
         </Link>
 
@@ -50,8 +50,10 @@ export function SiteHeader() {
               key={link.href}
               href={link.href}
               className={cn(
-                "rounded-full px-4 py-2 text-sm font-medium transition hover:bg-zinc-100",
-                pathname === link.href ? "bg-zinc-950 text-white hover:bg-zinc-950" : "text-zinc-700"
+                "rounded-full px-4 py-2 text-sm font-medium transition hover:bg-secondary/55",
+                pathname === link.href
+                  ? "bg-primary text-primary-foreground shadow-sm hover:bg-primary"
+                  : "text-foreground/72"
               )}
             >
               {link.label}
@@ -61,7 +63,7 @@ export function SiteHeader() {
 
         <div className="flex items-center gap-3">
           {appUser ? (
-            <div className="hidden rounded-full border border-zinc-200 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-600 sm:block">
+            <div className="hidden rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground sm:block">
               {appUser.role}
             </div>
           ) : null}
