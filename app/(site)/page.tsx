@@ -71,7 +71,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <Card className="border-white/60 bg-card/88">
+          <Card>
             <CardHeader>
               <CardTitle className="text-xl">Theme foundation</CardTitle>
             </CardHeader>
@@ -89,7 +89,7 @@ export default function HomePage() {
             const Icon = feature.icon;
 
             return (
-              <Card key={feature.title} className="bg-card/90">
+              <Card key={feature.title}>
                 <CardHeader className="space-y-4">
                   <div className="flex size-12 items-center justify-center rounded-[calc(var(--radius)+0.5rem)] bg-accent text-accent-foreground">
                     <Icon className="size-5" />
