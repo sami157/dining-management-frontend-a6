@@ -34,7 +34,7 @@ export function SiteHeader() {
 
   return (
     <header className="border-b border-border/80 bg-background/88 backdrop-blur">
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-6 px-6 py-4">
+      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-4">
         <Link href="/" className="flex flex-col">
           <span className="font-semibold uppercase tracking-[0.28em] text-muted-foreground">
             Dining
@@ -44,15 +44,15 @@ export function SiteHeader() {
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-2 md:flex">
+        <nav className="order-3 flex w-full flex-wrap items-center gap-2 md:order-2 md:w-auto">
           {links.map((link) => (
             <Link
               key={link.href}
               href={link.href}
               className={cn(
-                "rounded-full px-4 py-2 text-sm font-medium transition hover:bg-secondary/55",
+                "rounded-full border border-transparent px-4 py-2 text-sm font-medium transition",
                 pathname === link.href
-                  ? "bg-primary text-primary-foreground shadow-sm hover:bg-primary"
+                  ? "bg-primary text-primary-foreground shadow-sm"
                   : "text-foreground/72"
               )}
             >
@@ -61,7 +61,7 @@ export function SiteHeader() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-3">
+        <div className="order-2 flex items-center gap-3 md:order-3">
           {appUser ? (
             <div className="hidden rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground sm:block">
               {appUser.role}

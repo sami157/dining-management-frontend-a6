@@ -110,7 +110,13 @@ body {
 }
 
 a {
+  border: 1px solid transparent;
+  cursor: pointer;
   transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease;
+}
+
+a:hover {
+  border-color: currentColor;
 }
 
 a.active {

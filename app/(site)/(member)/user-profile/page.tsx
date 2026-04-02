@@ -214,7 +214,7 @@ export default function UserProfilePage() {
             />
 
             <div className="space-y-2">
-              <Label htmlFor="profileImage">Profile image URL</Label>
+              <Label htmlFor="profileImage">Profile Image URL</Label>
               <Input
                 disabled={!isEditing}
                 id="profileImage"
