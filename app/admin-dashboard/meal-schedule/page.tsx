@@ -3,7 +3,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CalendarDays,
-  Clock3,
   Plus,
   Save,
   Sparkles,
@@ -26,12 +25,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
-import {
-  createMealDeadline,
-  getMealDeadlines,
-  updateMealDeadline,
-} from "@/lib/api/deadlines";
-import { queryKeys } from "@/lib/query/keys";
 import {
   addScheduledMeal,
   createSchedule,
@@ -139,17 +132,6 @@ type AddMealDraft = {
   isAvailable: boolean;
 };
 
-type DeadlineEditorState = {
-  time: string;
-  offsetDays: string;
-};
-
-const defaultDeadlineEditors: Record<MealType, DeadlineEditorState> = {
-  BREAKFAST: { time: "22:00", offsetDays: "-1" },
-  LUNCH: { time: "09:00", offsetDays: "0" },
-  DINNER: { time: "15:00", offsetDays: "0" },
-};
-
 const createDefaultMealDrafts = (): CreateMealDraft[] =>
   mealTypeOptions.map((type) => ({
     type,
@@ -172,22 +154,14 @@ const MealSchedulePage = () => {
   const [createMealDrafts, setCreateMealDrafts] = useState<CreateMealDraft[]>(createDefaultMealDrafts);
   const [mealEditors, setMealEditors] = useState<Record<string, MealEditorState>>({});
   const [addMealDrafts, setAddMealDrafts] = useState<Record<string, AddMealDraft>>({});
-  const [deadlineEditors, setDeadlineEditors] = useState<Record<MealType, DeadlineEditorState>>({});
 
   const schedulesQuery = useQuery({
     queryKey: ["admin-schedules", selectedMonth],
     queryFn: () => getSchedules({ month: selectedMonth }),
   });
-  const deadlinesQuery = useQuery({
-    queryKey: queryKeys.mealDeadlines,
-    queryFn: getMealDeadlines,
-  });
 
   const syncSchedules = async () => {
     await queryClient.invalidateQueries({ queryKey: ["admin-schedules", selectedMonth] });
-  };
-  const syncDeadlines = async () => {
-    await queryClient.invalidateQueries({ queryKey: queryKeys.mealDeadlines });
   };
 
   const createScheduleMutation = useMutation({
@@ -211,32 +185,6 @@ const MealSchedulePage = () => {
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : "Failed to generate schedules.");
-    },
-  });
-  const saveDeadlineMutation = useMutation({
-    mutationFn: async ({
-      mealType,
-      time,
-      offsetDays,
-      exists,
-    }: {
-      mealType: MealType;
-      time: string;
-      offsetDays: number;
-      exists: boolean;
-    }) => {
-      if (exists) {
-        return updateMealDeadline(mealType, { time, offsetDays });
-      }
-
-      return createMealDeadline({ type: mealType, time, offsetDays });
-    },
-    onSuccess: async () => {
-      await syncDeadlines();
-      toast.success("Deadline saved.");
-    },
-    onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Failed to save deadline.");
     },
   });
 
@@ -472,52 +420,11 @@ const MealSchedulePage = () => {
     });
   };
 
-  const deadlines = deadlinesQuery.data ?? [];
-  const deadlineByType = new Map(deadlines.map((deadline) => [deadline.type, deadline]));
-
-  const handleDeadlineChange = <K extends keyof DeadlineEditorState>(
-    mealType: MealType,
-    field: K,
-    value: DeadlineEditorState[K]
-  ) => {
-    setDeadlineEditors((current) => ({
-      ...current,
-      [mealType]: {
-        ...(current[mealType] ?? { time: "", offsetDays: "0" }),
-        [field]: value,
-      },
-    }));
-  };
-
-  const handleSaveDeadline = async (mealType: MealType) => {
-    const draft = deadlineEditors[mealType];
-    const offsetDays = Number(draft?.offsetDays ?? "0");
-    const time = draft?.time?.trim();
-    const existingDeadline = deadlineByType.get(mealType);
-
-    if (!time) {
-      toast.error("Deadline time is required.");
-      return;
-    }
-
-    if (!Number.isInteger(offsetDays)) {
-      toast.error("Offset days must be a whole number.");
-      return;
-    }
-
-    await saveDeadlineMutation.mutateAsync({
-      mealType,
-      time,
-      offsetDays,
-      exists: Boolean(existingDeadline),
-    });
-  };
-
-  if (schedulesQuery.isPending || deadlinesQuery.isPending) {
+  if (schedulesQuery.isPending) {
     return <LoadingState label="Loading meal schedules..." />;
   }
 
-  if (schedulesQuery.isError || deadlinesQuery.isError) {
+  if (schedulesQuery.isError) {
     return <LoadingState label="We couldn't load the meal schedules." />;
   }
 
@@ -530,86 +437,6 @@ const MealSchedulePage = () => {
       />
 
       <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock3 className="size-5" />
-              <span>Universal meal deadlines</span>
-            </CardTitle>
-            <CardDescription>
-              These Dhaka-time cutoffs apply to member meal booking across the app.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            {mealTypeOptions.map((mealType) => {
-              const existingDeadline = deadlineByType.get(mealType);
-              const editor = deadlineEditors[mealType] ?? {
-                time: existingDeadline?.time ?? defaultDeadlineEditors[mealType].time,
-                offsetDays:
-                  existingDeadline
-                    ? String(existingDeadline.offsetDays)
-                    : defaultDeadlineEditors[mealType].offsetDays,
-              };
-
-              return (
-                <div
-                  key={mealType}
-                  className="rounded-[calc(var(--radius)+0.25rem)] border bg-card p-4"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div className="space-y-1">
-                      <p className="font-semibold text-foreground">{mealTypeLabels[mealType]}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {existingDeadline
-                          ? `Current: ${existingDeadline.time}, offset ${existingDeadline.offsetDays}`
-                          : "No deadline saved yet."}
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      onClick={() => handleSaveDeadline(mealType)}
-                      disabled={saveDeadlineMutation.isPending}
-                    >
-                      {saveDeadlineMutation.isPending ? (
-                        <Spinner className="size-4" />
-                      ) : (
-                        <Save />
-                      )}
-                      <span>Save</span>
-                    </Button>
-                  </div>
-
-                  <div className="mt-4 grid gap-4 md:grid-cols-2">
-                    <div className="space-y-1">
-                      <Label htmlFor={`deadline-time-${mealType}`}>Time</Label>
-                      <Input
-                        id={`deadline-time-${mealType}`}
-                        type="time"
-                        value={editor?.time ?? ""}
-                        onChange={(event) =>
-                          handleDeadlineChange(mealType, "time", event.target.value)
-                        }
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor={`deadline-offset-${mealType}`}>Offset days</Label>
-                      <Input
-                        id={`deadline-offset-${mealType}`}
-                        type="number"
-                        step="1"
-                        value={editor.offsetDays}
-                        onChange={(event) =>
-                          handleDeadlineChange(mealType, "offsetDays", event.target.value)
-                        }
-                      />
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

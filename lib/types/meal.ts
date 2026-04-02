@@ -1,5 +1,14 @@
 export type MealType = "BREAKFAST" | "LUNCH" | "DINNER";
 
+export type DayOfWeek =
+  | "SUNDAY"
+  | "MONDAY"
+  | "TUESDAY"
+  | "WEDNESDAY"
+  | "THURSDAY"
+  | "FRIDAY"
+  | "SATURDAY";
+
 export type MealDeadline = {
   id: string;
   type: MealType;
@@ -34,6 +43,14 @@ export type MealRegistration = {
   userId: string;
   count: number;
   registeredById: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type WeeklyMealTemplate = {
+  id: string;
+  dayOfWeek: DayOfWeek;
+  meals: MealType[];
   createdAt: string;
   updatedAt: string;
 };
