@@ -1,7 +1,7 @@
 'use client'
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Clock3, Save, Settings2 } from "lucide-react";
+import { Clock3, Minus, Plus, Save, Settings2 } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { PageIntro } from "@/components/layout/page-intro";
@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { createMealDeadline, getMealDeadlines, updateMealDeadline } from "@/lib/api/deadlines";
 import { getWeeklyMealTemplates, updateWeeklyMealTemplate } from "@/lib/api/templates";
 import { queryKeys } from "@/lib/query/keys";
@@ -45,6 +46,7 @@ type DeadlineEditorState = {
 
 const ConfigurationPage = () => {
   const queryClient = useQueryClient();
+  const [activeDeadlineTab, setActiveDeadlineTab] = useState<MealType>("BREAKFAST");
   const [deadlineEditors, setDeadlineEditors] = useState<Partial<Record<MealType, DeadlineEditorState>>>({});
   const [templateEditors, setTemplateEditors] = useState<Partial<Record<DayOfWeek, MealType[]>>>({});
 
@@ -153,6 +155,21 @@ const ConfigurationPage = () => {
     });
   };
 
+  const handleOffsetDaysStep = (mealType: MealType, direction: "increment" | "decrement") => {
+    const currentDeadline = deadlineByType.get(mealType);
+    const draft = deadlineEditors[mealType] ?? {
+      time: currentDeadline?.time ?? defaultDeadlineEditors[mealType].time,
+      offsetDays: currentDeadline
+        ? String(currentDeadline.offsetDays)
+        : defaultDeadlineEditors[mealType].offsetDays,
+    };
+    const nextOffsetDays =
+      (Number.parseInt(draft.offsetDays || "0", 10) || 0) +
+      (direction === "increment" ? 1 : -1);
+
+    handleDeadlineChange(mealType, "offsetDays", String(nextOffsetDays));
+  };
+
   const handleTemplateToggle = (dayOfWeek: DayOfWeek, mealType: MealType) => {
     setTemplateEditors((current) => {
       const baseMeals =
@@ -197,8 +214,17 @@ const ConfigurationPage = () => {
             </CardTitle>
             <CardDescription>These Dhaka-time cutoffs control when members can still book each meal type.</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-4">
-            {mealTypeOptions.map((mealType) => {
+          <CardContent>
+            <Tabs value={activeDeadlineTab} onValueChange={(value) => setActiveDeadlineTab(value as MealType)}>
+              <TabsList>
+                {mealTypeOptions.map((mealType) => (
+                  <TabsTrigger key={mealType} value={mealType}>
+                    {mealTypeLabels[mealType]}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+
+              {mealTypeOptions.map((mealType) => {
               const deadline = deadlineByType.get(mealType);
               const editor = deadlineEditors[mealType] ?? {
                 time: deadline?.time ?? defaultDeadlineEditors[mealType].time,
@@ -206,32 +232,62 @@ const ConfigurationPage = () => {
               };
 
               return (
-                <div key={mealType} className="rounded-[calc(var(--radius)+0.25rem)] border bg-card p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div className="space-y-1">
-                      <p className="font-semibold text-foreground">{mealTypeLabels[mealType]}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {deadline ? `Current: ${deadline.time}, offset ${deadline.offsetDays}` : "No deadline saved yet."}
-                      </p>
+                <TabsContent key={mealType} value={mealType}>
+                  <div className="rounded-[calc(var(--radius)+0.25rem)] bg-muted p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                      <div className="space-y-1">
+                        <p className="font-semibold text-foreground">{mealTypeLabels[mealType]}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {deadline ? `Current: ${deadline.time}, offset ${deadline.offsetDays}` : "No deadline saved yet."}
+                        </p>
+                      </div>
+                      <Button type="button" onClick={() => handleSaveDeadline(mealType)} disabled={saveDeadlineMutation.isPending}>
+                        {saveDeadlineMutation.isPending ? <Spinner className="size-4" /> : <Save />}
+                        <span>Save</span>
+                      </Button>
                     </div>
-                    <Button type="button" onClick={() => handleSaveDeadline(mealType)} disabled={saveDeadlineMutation.isPending}>
-                      {saveDeadlineMutation.isPending ? <Spinner className="size-4" /> : <Save />}
-                      <span>Save</span>
-                    </Button>
+                    <div className="mt-4 grid gap-4 md:grid-cols-2">
+                      <div className="space-y-1">
+                        <Label htmlFor={`deadline-time-${mealType}`}>Time</Label>
+                        <Input id={`deadline-time-${mealType}`} type="time" value={editor.time} onChange={(event) => handleDeadlineChange(mealType, "time", event.target.value)} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor={`deadline-offset-${mealType}`}>Offset days</Label>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="outline"
+                            aria-label={`Decrease ${mealTypeLabels[mealType]} offset days`}
+                            onClick={() => handleOffsetDaysStep(mealType, "decrement")}
+                          >
+                            <Minus />
+                          </Button>
+                          <Input
+                            id={`deadline-offset-${mealType}`}
+                            type="number"
+                            step="1"
+                            value={editor.offsetDays}
+                            onChange={(event) => handleDeadlineChange(mealType, "offsetDays", event.target.value)}
+                            className="text-center"
+                          />
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="outline"
+                            aria-label={`Increase ${mealTypeLabels[mealType]} offset days`}
+                            onClick={() => handleOffsetDaysStep(mealType, "increment")}
+                          >
+                            <Plus />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="mt-4 grid gap-4 md:grid-cols-2">
-                    <div className="space-y-1">
-                      <Label htmlFor={`deadline-time-${mealType}`}>Time</Label>
-                      <Input id={`deadline-time-${mealType}`} type="time" value={editor.time} onChange={(event) => handleDeadlineChange(mealType, "time", event.target.value)} />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor={`deadline-offset-${mealType}`}>Offset days</Label>
-                      <Input id={`deadline-offset-${mealType}`} type="number" step="1" value={editor.offsetDays} onChange={(event) => handleDeadlineChange(mealType, "offsetDays", event.target.value)} />
-                    </div>
-                  </div>
-                </div>
+                </TabsContent>
               );
-            })}
+              })}
+            </Tabs>
           </CardContent>
         </Card>
 
