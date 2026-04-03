@@ -224,7 +224,6 @@ const ConfigurationPage = () => {
               <Clock3 className="size-5" />
               <span>Universal Meal Deadlines</span>
             </CardTitle>
-            <CardDescription>These Dhaka-time cutoffs control when members can still book each meal type.</CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs value={activeDeadlineTab} onValueChange={(value) => setActiveDeadlineTab(value as MealType)}>

@@ -23,6 +23,14 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -43,6 +51,21 @@ const mealTypeLabels: Record<MealType, string> = {
   LUNCH: "Lunch",
   DINNER: "Dinner",
 };
+
+const monthOptions = [
+  { value: "01", label: "January" },
+  { value: "02", label: "February" },
+  { value: "03", label: "March" },
+  { value: "04", label: "April" },
+  { value: "05", label: "May" },
+  { value: "06", label: "June" },
+  { value: "07", label: "July" },
+  { value: "08", label: "August" },
+  { value: "09", label: "September" },
+  { value: "10", label: "October" },
+  { value: "11", label: "November" },
+  { value: "12", label: "December" },
+] as const;
 
 const weekdayFormatter = new Intl.DateTimeFormat("en-US", {
   weekday: "long",
@@ -110,6 +133,7 @@ const getDhakaToday = () => {
 };
 
 const getCurrentMonth = () => getDhakaToday().slice(0, 7);
+const getCurrentYear = () => getDhakaToday().slice(0, 4);
 
 type CreateMealDraft = {
   type: MealType;
@@ -428,6 +452,12 @@ const MealSchedulePage = () => {
     return <LoadingState label="We couldn't load the meal schedules." />;
   }
 
+  const selectedYear = selectedMonth.slice(0, 4);
+  const selectedMonthValue = selectedMonth.slice(5, 7);
+  const yearOptions = Array.from({ length: 5 }, (_, index) =>
+    String(Number(getCurrentYear()) - 2 + index)
+  );
+
   return (
     <div className="space-y-8">
       <PageIntro
@@ -449,13 +479,42 @@ const MealSchedulePage = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="schedule-month">Month</Label>
-              <Input
-                id="schedule-month"
-                type="month"
-                value={selectedMonth}
-                onChange={(event) => setSelectedMonth(event.target.value)}
-              />
+              <Label>Month</Label>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Select
+                  value={selectedMonthValue}
+                  onValueChange={(value) => setSelectedMonth(`${selectedYear}-${value}`)}
+                >
+                  <SelectTrigger aria-label="Select month">
+                    <SelectValue placeholder="Month" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {monthOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+
+                <Select
+                  value={selectedYear}
+                  onValueChange={(value) => setSelectedMonth(`${value}-${selectedMonthValue}`)}
+                >
+                  <SelectTrigger aria-label="Select year">
+                    <SelectValue placeholder="Year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {yearOptions.map((year) => (
+                      <SelectItem key={year} value={year}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <Button
               type="button"

@@ -17,12 +17,8 @@ import { PageIntro } from "@/components/layout/page-intro";
 import { LoadingState } from "@/components/shared/loading-state";
 import { Button } from "@/components/ui/button";
 import {
-  Carousel,
-  CarouselButton,
-  CarouselContent,
-  CarouselControls,
-  CarouselItem,
-} from "@/components/ui/carousel";
+  Calendar,
+} from "@/components/ui/calendar";
 import {
   Card,
   CardContent,
@@ -157,6 +153,23 @@ const getDhakaToday = () => {
 
 const getCurrentMonth = () => getDhakaToday().slice(0, 7);
 const getCurrentYear = () => getDhakaToday().slice(0, 4);
+const monthKeyToDate = (monthKey: string) => {
+  const [year, month] = monthKey.split("-").map(Number);
+
+  return new Date(year, month - 1, 1);
+};
+const dateKeyToDate = (dateKey: string) => {
+  const [year, month, day] = dateKey.split("-").map(Number);
+
+  return new Date(year, month - 1, day);
+};
+const dateToDateKey = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
 
 const isMealDeadlinePassed = (deadline: string) => {
   const deadlineTime = Date.parse(deadline);
@@ -173,6 +186,7 @@ const UserDashboardPage = () => {
   const { appUser, user } = useAuth();
   const [pendingMealId, setPendingMealId] = useState<string | null>(null);
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth);
+  const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
   const upcomingSchedulesQuery = useQuery({
     queryKey: queryKeys.upcomingSchedules([selectedMonth]),
     queryFn: () => getSchedules({ month: selectedMonth }),
@@ -256,6 +270,20 @@ const UserDashboardPage = () => {
     .filter((schedule) => getDateKey(schedule.date).slice(0, 7) === selectedMonth)
     .sort((left, right) => getDateKey(left.date).localeCompare(getDateKey(right.date)))
     .filter((schedule) => schedule.meals.length > 0);
+  const scheduledDateKeys = new Set(
+    selectedMonthSchedules.map((schedule) => getDateKey(schedule.date))
+  );
+  const fallbackDateKey = selectedMonthSchedules[0]
+    ? getDateKey(selectedMonthSchedules[0].date)
+    : `${selectedMonth}-01`;
+  const effectiveSelectedDateKey =
+    selectedDateKey && selectedDateKey.startsWith(selectedMonth)
+      ? selectedDateKey
+      : fallbackDateKey;
+  const selectedSchedule =
+    selectedMonthSchedules.find(
+      (schedule) => getDateKey(schedule.date) === effectiveSelectedDateKey
+    ) ?? null;
 
   const registrationByMealId = new Map(
     registrations.map((registration) => [registration.scheduledMealId, registration])
@@ -364,29 +392,49 @@ const UserDashboardPage = () => {
             </CardContent>
           </Card>
         </div>
-
+                  <Calendar
+                    variant="bookedDates"
+                    mode="single"
+                    month={monthKeyToDate(selectedMonth)}
+                    selected={dateKeyToDate(effectiveSelectedDateKey)}
+                    onSelect={(date) => {
+                      if (date) {
+                        setSelectedDateKey(dateToDateKey(date));
+                      }
+                    }}
+                    modifiers={{
+                      scheduled: (date) => scheduledDateKeys.has(dateToDateKey(date)),
+                    }}
+                  />
         <div className="space-y-4 md:w-[24rem]">
           {selectedMonthSchedules.length ? (
-            <Carousel>
-              <CarouselContent>
-                {selectedMonthSchedules.map((schedule) => (
-                  <CarouselItem key={schedule.id}>
-                    <ScheduleCard
-                      schedule={schedule}
-                      registrationByMealId={registrationByMealId}
-                      pendingMealId={pendingMealId}
-                      onRegister={handleRegister}
-                      onCancel={handleCancel}
-                      onUpdateCount={handleUpdateCount}
-                    />
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              <CarouselControls className="justify-between pt-2 w-full">
-                <CarouselButton direction="prev" />
-                <CarouselButton direction="next" />
-              </CarouselControls>
-            </Carousel>
+            <Card className="w-full">
+              <CardHeader>
+                <CardTitle>Schedule Calendar</CardTitle>
+                <CardDescription>
+                  Pick a date to view the meals scheduled for that day.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="rounded-lg border bg-muted/30 p-2">
+                </div>
+
+                {selectedSchedule ? (
+                  <ScheduleCard
+                    schedule={selectedSchedule}
+                    registrationByMealId={registrationByMealId}
+                    pendingMealId={pendingMealId}
+                    onRegister={handleRegister}
+                    onCancel={handleCancel}
+                    onUpdateCount={handleUpdateCount}
+                  />
+                ) : (
+                  <div className="rounded-lg border border-dashed bg-muted/20 p-4 text-sm text-muted-foreground">
+                    No meal schedule is available for {formatDateLabel(effectiveSelectedDateKey)}.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           ) : (
             <Card>
               <CardHeader>
@@ -635,7 +683,7 @@ const MealRow = ({
             onClick={() => onCancel(registration.id, meal.id)}
             disabled={deadlinePassed || isBusy}
           >
-            {isBusy ? <Spinner className="size-4" /> : <Trash2  className="text-red-500" />}
+            {isBusy ? <Spinner className="size-4" /> : <Trash2 className="text-red-500" />}
             <span>Cancel</span>
           </Button>
         ) : (
