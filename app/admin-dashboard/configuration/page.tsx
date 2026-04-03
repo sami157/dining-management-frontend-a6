@@ -1,7 +1,7 @@
 'use client'
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Clock3, Minus, Plus, Save, Settings2 } from "lucide-react";
+import { Clock3, Edit3, Minus, Plus, Save, Settings2 } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { PageIntro } from "@/components/layout/page-intro";
@@ -49,6 +49,7 @@ const ConfigurationPage = () => {
   const [activeDeadlineTab, setActiveDeadlineTab] = useState<MealType>("BREAKFAST");
   const [deadlineEditors, setDeadlineEditors] = useState<Partial<Record<MealType, DeadlineEditorState>>>({});
   const [templateEditors, setTemplateEditors] = useState<Partial<Record<DayOfWeek, MealType[]>>>({});
+  const [isEditingTemplates, setIsEditingTemplates] = useState(false);
 
   const deadlinesQuery = useQuery({
     queryKey: queryKeys.mealDeadlines,
@@ -87,9 +88,13 @@ const ConfigurationPage = () => {
   });
 
   const saveTemplateMutation = useMutation({
-    mutationFn: updateWeeklyMealTemplate,
+    mutationFn: async (payloads: Parameters<typeof updateWeeklyMealTemplate>[0][]) => {
+      await Promise.all(payloads.map((payload) => updateWeeklyMealTemplate(payload)));
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["weekly-meal-templates"] });
+      setTemplateEditors({});
+      setIsEditingTemplates(false);
       toast.success("Meal template saved.");
     },
     onError: (error) => {
@@ -171,6 +176,10 @@ const ConfigurationPage = () => {
   };
 
   const handleTemplateToggle = (dayOfWeek: DayOfWeek, mealType: MealType) => {
+    if (!isEditingTemplates) {
+      return;
+    }
+
     setTemplateEditors((current) => {
       const baseMeals =
         current[dayOfWeek] ??
@@ -188,13 +197,16 @@ const ConfigurationPage = () => {
     });
   };
 
-  const handleSaveTemplate = async (dayOfWeek: DayOfWeek) => {
-    const meals =
-      templateEditors[dayOfWeek] ??
-      templateByDay.get(dayOfWeek)?.meals ??
-      defaultTemplateMeals[dayOfWeek];
+  const handleSaveTemplates = async () => {
+    const payloads = dayOfWeekOrder.map((dayOfWeek) => ({
+      dayOfWeek,
+      meals:
+        templateEditors[dayOfWeek] ??
+        templateByDay.get(dayOfWeek)?.meals ??
+        defaultTemplateMeals[dayOfWeek],
+    }));
 
-    await saveTemplateMutation.mutateAsync({ dayOfWeek, meals });
+    await saveTemplateMutation.mutateAsync(payloads);
   };
 
   return (
@@ -210,7 +222,7 @@ const ConfigurationPage = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock3 className="size-5" />
-              <span>Universal meal deadlines</span>
+              <span>Universal Meal Deadlines</span>
             </CardTitle>
             <CardDescription>These Dhaka-time cutoffs control when members can still book each meal type.</CardDescription>
           </CardHeader>
@@ -225,67 +237,64 @@ const ConfigurationPage = () => {
               </TabsList>
 
               {mealTypeOptions.map((mealType) => {
-              const deadline = deadlineByType.get(mealType);
-              const editor = deadlineEditors[mealType] ?? {
-                time: deadline?.time ?? defaultDeadlineEditors[mealType].time,
-                offsetDays: deadline ? String(deadline.offsetDays) : defaultDeadlineEditors[mealType].offsetDays,
-              };
+                const deadline = deadlineByType.get(mealType);
+                const editor = deadlineEditors[mealType] ?? {
+                  time: deadline?.time ?? defaultDeadlineEditors[mealType].time,
+                  offsetDays: deadline ? String(deadline.offsetDays) : defaultDeadlineEditors[mealType].offsetDays,
+                };
 
-              return (
-                <TabsContent key={mealType} value={mealType}>
-                  <div className="rounded-[calc(var(--radius)+0.25rem)] bg-muted p-4">
-                    <div className="flex flex-wrap items-start justify-between gap-4">
-                      <div className="space-y-1">
-                        <p className="font-semibold text-foreground">{mealTypeLabels[mealType]}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {deadline ? `Current: ${deadline.time}, offset ${deadline.offsetDays}` : "No deadline saved yet."}
-                        </p>
+                return (
+                  <TabsContent key={mealType} value={mealType}>
+                    <div className="rounded-[calc(var(--radius)+0.25rem)] bg-muted p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div className="space-y-1">
+                          <p className="font-semibold text-foreground">{mealTypeLabels[mealType]}</p>
+                        </div>
+                        <Button type="button" onClick={() => handleSaveDeadline(mealType)} disabled={saveDeadlineMutation.isPending}>
+                          {saveDeadlineMutation.isPending ? <Spinner className="size-4" /> : <Save />}
+                          <span>Save</span>
+                        </Button>
                       </div>
-                      <Button type="button" onClick={() => handleSaveDeadline(mealType)} disabled={saveDeadlineMutation.isPending}>
-                        {saveDeadlineMutation.isPending ? <Spinner className="size-4" /> : <Save />}
-                        <span>Save</span>
-                      </Button>
-                    </div>
-                    <div className="mt-4 grid gap-4 md:grid-cols-2">
-                      <div className="space-y-1">
-                        <Label htmlFor={`deadline-time-${mealType}`}>Time</Label>
-                        <Input id={`deadline-time-${mealType}`} type="time" value={editor.time} onChange={(event) => handleDeadlineChange(mealType, "time", event.target.value)} />
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor={`deadline-offset-${mealType}`}>Offset days</Label>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="outline"
-                            aria-label={`Decrease ${mealTypeLabels[mealType]} offset days`}
-                            onClick={() => handleOffsetDaysStep(mealType, "decrement")}
-                          >
-                            <Minus />
-                          </Button>
-                          <Input
-                            id={`deadline-offset-${mealType}`}
-                            type="number"
-                            step="1"
-                            value={editor.offsetDays}
-                            onChange={(event) => handleDeadlineChange(mealType, "offsetDays", event.target.value)}
-                            className="text-center"
-                          />
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="outline"
-                            aria-label={`Increase ${mealTypeLabels[mealType]} offset days`}
-                            onClick={() => handleOffsetDaysStep(mealType, "increment")}
-                          >
-                            <Plus />
-                          </Button>
+                      <div className="mt-4 grid gap-4 md:grid-cols-2">
+                        <div className="space-y-1">
+                          <Label htmlFor={`deadline-time-${mealType}`}>Time</Label>
+                          <Input id={`deadline-time-${mealType}`} type="time" value={editor.time} onChange={(event) => handleDeadlineChange(mealType, "time", event.target.value)} />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor={`deadline-offset-${mealType}`}>Offset days</Label>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="outline"
+                              aria-label={`Decrease ${mealTypeLabels[mealType]} offset days`}
+                              onClick={() => handleOffsetDaysStep(mealType, "decrement")}
+                            >
+                              <Minus />
+                            </Button>
+                            <Input
+                              id={`deadline-offset-${mealType}`}
+                              type="number"
+                              step="1"
+                              value={editor.offsetDays}
+                              onChange={(event) => handleDeadlineChange(mealType, "offsetDays", event.target.value)}
+                              className="text-center"
+                            />
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="outline"
+                              aria-label={`Increase ${mealTypeLabels[mealType]} offset days`}
+                              onClick={() => handleOffsetDaysStep(mealType, "increment")}
+                            >
+                              <Plus />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </TabsContent>
-              );
+                  </TabsContent>
+                );
               })}
             </Tabs>
           </CardContent>
@@ -295,33 +304,48 @@ const ConfigurationPage = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Settings2 className="size-5" />
-              <span>Weekly meal template</span>
+              <span>Weekly Meal Template</span>
             </CardTitle>
-            <CardDescription>Choose which meals should exist on each weekday when generating future schedules.</CardDescription>
+            <CardDescription className="flex items-center gap-4 justify-between">
+              <p>
+                Choose which meals should exist on each weekday when generating future schedules.
+              </p>
+              {isEditingTemplates ? (
+                <Button type="button" onClick={handleSaveTemplates} disabled={saveTemplateMutation.isPending}>
+                  {saveTemplateMutation.isPending ? <Spinner className="size-4" /> : <Save />}
+                  <span>Save</span>
+                </Button>
+              ) : (
+                <Button type="button" onClick={() => setIsEditingTemplates(true)}>
+                  <Edit3 />
+                  <span>Edit</span>
+                </Button>
+              )}
+            </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">
+            <div className="flex justify-end">
+            </div>
             {dayOfWeekOrder.map((dayOfWeek) => {
               const template = templateByDay.get(dayOfWeek);
               const selectedMeals = templateEditors[dayOfWeek] ?? template?.meals ?? defaultTemplateMeals[dayOfWeek];
 
               return (
-                <div key={dayOfWeek} className="rounded-[calc(var(--radius)+0.25rem)] border bg-card p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div className="space-y-1">
+                <div key={dayOfWeek} className="rounded-[calc(var(--radius)+0.05rem)] bg-card flex items-center justify-between gap-4 p-4">
+                  <div>
+                    <div>
                       <p className="font-semibold text-foreground">{dayOfWeek.charAt(0) + dayOfWeek.slice(1).toLowerCase()}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {selectedMeals.length ? selectedMeals.map((meal) => mealTypeLabels[meal]).join(", ") : "No meals selected"}
-                      </p>
                     </div>
-                    <Button type="button" onClick={() => handleSaveTemplate(dayOfWeek)} disabled={saveTemplateMutation.isPending}>
-                      {saveTemplateMutation.isPending ? <Spinner className="size-4" /> : <Save />}
-                      <span>Save</span>
-                    </Button>
                   </div>
-                  <div className="mt-4 flex flex-wrap gap-4">
+                  <div className="flex flex-wrap gap-4">
                     {mealTypeOptions.map((mealType) => (
                       <label key={mealType} className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <input type="checkbox" checked={selectedMeals.includes(mealType)} onChange={() => handleTemplateToggle(dayOfWeek, mealType)} />
+                        <input
+                          type="checkbox"
+                          checked={selectedMeals.includes(mealType)}
+                          onChange={() => handleTemplateToggle(dayOfWeek, mealType)}
+                          disabled={!isEditingTemplates || saveTemplateMutation.isPending}
+                        />
                         <span>{mealTypeLabels[mealType]}</span>
                       </label>
                     ))}

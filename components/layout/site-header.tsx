@@ -33,8 +33,8 @@ export function SiteHeader() {
     : guestLinks;
 
   return (
-    <header className="border-b border-border/80 bg-background/88 backdrop-blur">
-      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-4">
+    <header className="bg-muted backdrop-blur">
+      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-2">
         <Link href="/" className="flex flex-col">
           <span className="font-semibold uppercase tracking-[0.28em] text-muted-foreground">
             Dining

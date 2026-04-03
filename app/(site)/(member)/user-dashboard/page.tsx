@@ -5,6 +5,8 @@ import {
   CalendarDays,
   Check,
   Info,
+  Minus,
+  Plus,
   Soup,
   Trash2,
   UtensilsCrossed,
@@ -15,24 +17,34 @@ import { PageIntro } from "@/components/layout/page-intro";
 import { LoadingState } from "@/components/shared/loading-state";
 import { Button } from "@/components/ui/button";
 import {
+  Carousel,
+  CarouselButton,
+  CarouselContent,
+  CarouselControls,
+  CarouselItem,
+} from "@/components/ui/carousel";
+import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectGroup
 } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import {
   createRegistration,
   deleteRegistration,
   getRegistrations,
+  updateRegistration,
 } from "@/lib/api/registrations";
 import { getSchedules } from "@/lib/api/schedules";
 import { queryKeys } from "@/lib/query/keys";
@@ -45,17 +57,13 @@ import type {
 import { useAuth } from "@/providers/AuthProvider";
 import { IoCalculator } from "react-icons/io5";
 
-const mealTypeOrder: Record<MealType, number> = {
-  BREAKFAST: 0,
-  LUNCH: 1,
-  DINNER: 2,
-};
-
 const mealTypeLabels: Record<MealType, string> = {
   BREAKFAST: "Breakfast",
   LUNCH: "Lunch",
   DINNER: "Dinner",
 };
+
+const mealTypeOptions: MealType[] = ["BREAKFAST", "LUNCH", "DINNER"];
 
 const monthOptions = [
   { value: "01", label: "January" },
@@ -205,6 +213,26 @@ const UserDashboardPage = () => {
     },
   });
 
+  const updateCountMutation = useMutation({
+    mutationFn: ({
+      registrationId,
+      count,
+    }: {
+      registrationId: string;
+      count: number;
+    }) => updateRegistration(registrationId, { count }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.myRegistrations });
+      toast.success("Meal count updated.");
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Could not update the meal count.");
+    },
+    onSettled: () => {
+      setPendingMealId(null);
+    },
+  });
+
   if (upcomingSchedulesQuery.isPending || registrationsQuery.isPending) {
     return <LoadingState label="Loading your upcoming meals..." />;
   }
@@ -255,11 +283,19 @@ const UserDashboardPage = () => {
     await cancelMutation.mutateAsync(registrationId);
   };
 
+  const handleUpdateCount = async (
+    registrationId: string,
+    scheduledMealId: string,
+    count: number
+  ) => {
+    setPendingMealId(scheduledMealId);
+    await updateCountMutation.mutateAsync({ registrationId, count });
+  };
+
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-6 py-12">
+    <main className="mx-auto flex max-w-6xl flex-1 flex-col gap-8">
       <PageIntro
-        eyebrow="Member Area"
-        title="Monthly meal bookings"
+        title="Monthly Meal Bookings"
         description="Pick a month to browse each scheduled day and manage your breakfast, lunch, and dinner bookings."
       />
 
@@ -269,46 +305,47 @@ const UserDashboardPage = () => {
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
               Select month
             </p>
-            <div className="grid max-w-xs gap-3 sm:grid-cols-2 md:grid-cols-1 xl:grid-cols-2">
-              <Select
-                value={selectedMonthValue}
-                onValueChange={(value) => setSelectedMonth(`${selectedYear}-${value}`)}
-              >
-                <SelectTrigger aria-label="Select month">
-                  <SelectValue placeholder="Month" />
-                </SelectTrigger>
-                <SelectContent>
+            <Select
+              value={selectedMonthValue}
+              onValueChange={(value) => setSelectedMonth(`${selectedYear}-${value}`)}
+            >
+              <SelectTrigger aria-label="Select month">
+                <SelectValue placeholder="Month" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
                   {monthOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>
                   ))}
-                </SelectContent>
-              </Select>
-              <Select
-                value={selectedYear}
-                onValueChange={(value) => setSelectedMonth(`${value}-${selectedMonthValue}`)}
-              >
-                <SelectTrigger aria-label="Select year">
-                  <SelectValue placeholder="Year" />
-                </SelectTrigger>
-                <SelectContent>
-                  {yearOptions.map((year) => (
-                    <SelectItem key={year} value={year}>
-                      {year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={selectedYear}
+              onValueChange={(value) => setSelectedMonth(`${value}-${selectedMonthValue}`)}
+            >
+              <SelectTrigger aria-label="Select year">
+                <SelectValue placeholder="Year" />
+              </SelectTrigger>
+              <SelectContent>
+                {yearOptions.map((year) => (
+                  <SelectItem key={year} value={year}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle>Month at a glance</CardTitle>
+              <CardTitle>Month at a Glance</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2 md:grid-cols-1">
-              <div className="rounded-[calc(var(--radius-field)+0.25rem)] border bg-muted/40 p-4">
+              <div className="rounded-lg bg-muted p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
                   Bookings
                 </p>
@@ -316,7 +353,7 @@ const UserDashboardPage = () => {
                   {totalMonthBookings}
                 </p>
               </div>
-              <div className="rounded-[calc(var(--radius-field)+0.25rem)] border bg-muted/40 p-4">
+              <div className="rounded-lg bg-muted p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
                   Balance
                 </p>
@@ -328,18 +365,28 @@ const UserDashboardPage = () => {
           </Card>
         </div>
 
-        <div className="grid gap-5">
+        <div className="space-y-4 md:w-[24rem]">
           {selectedMonthSchedules.length ? (
-            selectedMonthSchedules.map((schedule) => (
-              <ScheduleCard
-                key={schedule.id}
-                schedule={schedule}
-                registrationByMealId={registrationByMealId}
-                pendingMealId={pendingMealId}
-                onRegister={handleRegister}
-                onCancel={handleCancel}
-              />
-            ))
+            <Carousel>
+              <CarouselContent>
+                {selectedMonthSchedules.map((schedule) => (
+                  <CarouselItem key={schedule.id}>
+                    <ScheduleCard
+                      schedule={schedule}
+                      registrationByMealId={registrationByMealId}
+                      pendingMealId={pendingMealId}
+                      onRegister={handleRegister}
+                      onCancel={handleCancel}
+                      onUpdateCount={handleUpdateCount}
+                    />
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselControls className="justify-between pt-2 w-full">
+                <CarouselButton direction="prev" />
+                <CarouselButton direction="next" />
+              </CarouselControls>
+            </Carousel>
           ) : (
             <Card>
               <CardHeader>
@@ -362,6 +409,11 @@ type ScheduleCardProps = {
   pendingMealId: string | null;
   onRegister: (scheduledMealId: string) => Promise<void>;
   onCancel: (registrationId: string, scheduledMealId: string) => Promise<void>;
+  onUpdateCount: (
+    registrationId: string,
+    scheduledMealId: string,
+    count: number
+  ) => Promise<void>;
 };
 
 const ScheduleCard = ({
@@ -370,13 +422,16 @@ const ScheduleCard = ({
   pendingMealId,
   onRegister,
   onCancel,
+  onUpdateCount,
 }: ScheduleCardProps) => {
-  const meals = [...schedule.meals].sort(
-    (left, right) => mealTypeOrder[left.type] - mealTypeOrder[right.type]
+  const mealByType = new Map(
+    schedule.meals.map((meal) => [meal.type, meal] satisfies [MealType, ScheduledMeal])
   );
+  const mealSlots = mealTypeOptions.map((mealType) => mealByType.get(mealType) ?? null);
+  const availableMealCount = mealSlots.filter(Boolean).length;
 
   return (
-    <Card className="w-full md:w-[24rem]">
+    <Card className="w-full">
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1">
@@ -385,13 +440,22 @@ const ScheduleCard = ({
               <span>{formatDateLabel(schedule.date)}</span>
             </CardTitle>
             <CardDescription>
-              {meals.length} available meal option{meals.length === 1 ? "" : "s"} for this day.
+              {availableMealCount} available meal option{availableMealCount === 1 ? "" : "s"} for this day.
             </CardDescription>
           </div>
         </div>
       </CardHeader>
       <CardContent className="grid gap-4">
-        {meals.map((meal) => {
+        {mealSlots.map((meal, index) => {
+          if (!meal) {
+            return (
+              <MealPlaceholderCard
+                key={`${schedule.id}-${mealTypeOptions[index]}`}
+                mealType={mealTypeOptions[index]}
+              />
+            );
+          }
+
           const registration = registrationByMealId.get(meal.id);
           const deadlinePassed = isMealDeadlinePassed(meal.deadline);
           const isUnavailable = !meal.isAvailable;
@@ -399,7 +463,7 @@ const ScheduleCard = ({
 
           return (
             <MealRow
-              key={meal.id}
+              key={`${meal.id}:${registration?.count ?? 0}`}
               meal={meal}
               registration={registration}
               deadlinePassed={deadlinePassed}
@@ -407,11 +471,50 @@ const ScheduleCard = ({
               isBusy={isBusy}
               onRegister={onRegister}
               onCancel={onCancel}
+              onUpdateCount={onUpdateCount}
             />
           );
         })}
       </CardContent>
     </Card>
+  );
+};
+
+const MealPlaceholderCard = ({ mealType }: { mealType: MealType }) => {
+  return (
+    <div className="flex h-full w-full flex-col rounded-lg border border-dashed bg-muted p-4">
+      <div className="flex min-h-24 flex-1 flex-col justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex size-10 items-center justify-center rounded-full border border-dashed bg-background/70 text-muted-foreground">
+            {mealType === "BREAKFAST" ? (
+              <Soup className="size-4" />
+            ) : (
+              <UtensilsCrossed className="size-4" />
+            )}
+          </div>
+          <div>
+            <p className="text-base font-semibold text-muted-foreground">
+              {mealTypeLabels[mealType]}
+            </p>
+            <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+              <IoCalculator />
+              <span>Not available</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="min-h-12 rounded-md border border-dashed bg-background/70 px-3 py-2 text-sm text-muted-foreground">
+          <p>Meal not scheduled</p>
+        </div>
+      </div>
+
+      <div className="mt-4 flex items-center gap-3">
+        <Button type="button" variant="outline" disabled className="w-full">
+          <Info className="size-4" />
+          <span>Not Available</span>
+        </Button>
+      </div>
+    </div>
   );
 };
 
@@ -423,6 +526,11 @@ type MealRowProps = {
   isBusy: boolean;
   onRegister: (scheduledMealId: string) => Promise<void>;
   onCancel: (registrationId: string, scheduledMealId: string) => Promise<void>;
+  onUpdateCount: (
+    registrationId: string,
+    scheduledMealId: string,
+    count: number
+  ) => Promise<void>;
 };
 
 const MealRow = ({
@@ -433,37 +541,88 @@ const MealRow = ({
   isBusy,
   onRegister,
   onCancel,
+  onUpdateCount,
 }: MealRowProps) => {
-  const statusLabel = registration
-    ? `Booked${registration.count > 1 ? ` x${registration.count}` : ""}`
-    : null;
+  const [countDraft, setCountDraft] = useState(String(registration?.count ?? 1));
+
+  const commitCount = async (nextCount: number) => {
+    if (!registration) {
+      return;
+    }
+
+    const normalizedCount = Math.max(1, Math.floor(nextCount));
+    setCountDraft(String(normalizedCount));
+
+    if (normalizedCount === registration.count) {
+      return;
+    }
+
+    await onUpdateCount(registration.id, meal.id, normalizedCount);
+  };
 
   return (
-    <div className="flex h-full w-full flex-col rounded-[calc(var(--radius)+0.25rem)] border bg-card p-4">
+    <div
+      className={`flex h-full w-full flex-col rounded-lg bg-card p-4`}
+    >
       <div className="flex min-h-24 flex-1 flex-col justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex size-10 items-center justify-center rounded-full border bg-muted/40">
-            {meal.type === "BREAKFAST" ? (
-              <Soup className="size-4" />
-            ) : (
-              <UtensilsCrossed className="size-4" />
-            )}
-          </div>
-          <div>
-            <p className="text-base font-semibold text-foreground">{mealTypeLabels[meal.type]}</p>
-            <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-              <IoCalculator />
-              <span>{String(meal.weight)}</span>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex size-10 items-center justify-center rounded-full border bg-muted">
+              {meal.type === "BREAKFAST" ? (
+                <Soup className="size-4" />
+              ) : (
+                <UtensilsCrossed className="size-4" />
+              )}
+            </div>
+            <div>
+              <p className="text-base font-semibold text-foreground">{mealTypeLabels[meal.type]}</p>
+              <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+                <IoCalculator />
+                <span>{String(meal.weight)}</span>
+              </div>
             </div>
           </div>
-          {statusLabel ? (
-            <span className="rounded-full border border-success/40 bg-success/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-success-foreground">
-              {statusLabel}
-            </span>
+          {registration ? (
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => void commitCount((registration?.count ?? 1) - 1)}
+                disabled={deadlinePassed || isBusy || (registration?.count ?? 1) <= 1}
+                aria-label={`Decrease ${mealTypeLabels[meal.type]} meal count`}
+              >
+                <Minus className="size-4" />
+              </Button>
+              <Input
+                min="1"
+                value={countDraft}
+                onChange={(event) => setCountDraft(event.target.value)}
+                onBlur={() => void commitCount(Number(countDraft))}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.currentTarget.blur();
+                  }
+                }}
+                disabled={deadlinePassed || isBusy}
+                className="h-9 w-20 text-center"
+                aria-label={`${mealTypeLabels[meal.type]} meal count`}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => void commitCount((registration?.count ?? 1) + 1)}
+                disabled={deadlinePassed || isBusy}
+                aria-label={`Increase ${mealTypeLabels[meal.type]} meal count`}
+              >
+                <Plus className="size-4" />
+              </Button>
+            </div>
           ) : null}
         </div>
 
-        <div className="min-h-12 rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
+        <div className="min-h-12 rounded-md bg-muted p-3 text-sm text-muted-foreground">
           <p>{meal.menu || "Menu not specified"}</p>
         </div>
       </div>
@@ -476,8 +635,8 @@ const MealRow = ({
             onClick={() => onCancel(registration.id, meal.id)}
             disabled={deadlinePassed || isBusy}
           >
-            {isBusy ? <Spinner className="size-4" /> : <Trash2 />}
-            <span>Cancel booking</span>
+            {isBusy ? <Spinner className="size-4" /> : <Trash2  className="text-red-500" />}
+            <span>Cancel</span>
           </Button>
         ) : (
           <Button
