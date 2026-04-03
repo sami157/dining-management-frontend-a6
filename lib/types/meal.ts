@@ -26,6 +26,7 @@ export type ScheduledMeal = {
   weight: string | number;
   menu?: string | null;
   updatedAt: string;
+  deadline: string;
 };
 
 export type MealSchedule = {

@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CalendarDays,
   Check,
-  Clock3,
+  Info,
   Soup,
   Trash2,
   UtensilsCrossed,
@@ -21,9 +21,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
-import { getMealDeadlines } from "@/lib/api/deadlines";
 import {
   createRegistration,
   deleteRegistration,
@@ -32,13 +37,13 @@ import {
 import { getSchedules } from "@/lib/api/schedules";
 import { queryKeys } from "@/lib/query/keys";
 import type {
-  MealDeadline,
   MealRegistration,
   MealSchedule,
   MealType,
   ScheduledMeal,
 } from "@/lib/types/meal";
 import { useAuth } from "@/providers/AuthProvider";
+import { IoCalculator } from "react-icons/io5";
 
 const mealTypeOrder: Record<MealType, number> = {
   BREAKFAST: 0,
@@ -52,6 +57,21 @@ const mealTypeLabels: Record<MealType, string> = {
   DINNER: "Dinner",
 };
 
+const monthOptions = [
+  { value: "01", label: "January" },
+  { value: "02", label: "February" },
+  { value: "03", label: "March" },
+  { value: "04", label: "April" },
+  { value: "05", label: "May" },
+  { value: "06", label: "June" },
+  { value: "07", label: "July" },
+  { value: "08", label: "August" },
+  { value: "09", label: "September" },
+  { value: "10", label: "October" },
+  { value: "11", label: "November" },
+  { value: "12", label: "December" },
+] as const;
+
 const weekdayFormatter = new Intl.DateTimeFormat("en-US", {
   weekday: "long",
   timeZone: "Asia/Dhaka",
@@ -61,13 +81,6 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
   day: "numeric",
   month: "short",
   year: "numeric",
-  timeZone: "Asia/Dhaka",
-});
-
-const timeFormatter = new Intl.DateTimeFormat("en-US", {
-  hour: "numeric",
-  minute: "2-digit",
-  hour12: true,
   timeZone: "Asia/Dhaka",
 });
 
@@ -101,111 +114,60 @@ const formatDateLabel = (dateString: string) => {
   return `${weekdayFormatter.format(date)}, ${dateFormatter.format(date)}`;
 };
 
-const formatDeadlineLabel = (scheduleDate: string, deadline?: MealDeadline) => {
-  if (!deadline) {
-    return "No deadline configured";
+const getDateKey = (dateString: string) => {
+  const date = parseScheduleDate(dateString);
+
+  if (!date) {
+    return dateString.includes("T") ? dateString.slice(0, 10) : dateString;
   }
 
-  const deadlineDate = addDaysToDateString(scheduleDate, deadline.offsetDays);
-  const [hours, minutes] = deadline.time.split(":").map(Number);
-  const deadlineInstant = new Date(
-    Date.UTC(
-      Number(deadlineDate.slice(0, 4)),
-      Number(deadlineDate.slice(5, 7)) - 1,
-      Number(deadlineDate.slice(8, 10)),
-      hours - 6,
-      minutes
-    )
-  );
-
-  return `${formatDateLabel(deadlineDate)} at ${timeFormatter.format(deadlineInstant)} (Dhaka)`;
+  return date.toISOString().slice(0, 10);
 };
 
-const getDhakaNowParts = () => {
+const getDhakaDateParts = (date = new Date()) => {
   const formatter = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Dhaka",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
   });
 
-  const parts = formatter.formatToParts(new Date());
+  const parts = formatter.formatToParts(date);
 
   return {
     year: parts.find((part) => part.type === "year")?.value ?? "0000",
     month: parts.find((part) => part.type === "month")?.value ?? "01",
     day: parts.find((part) => part.type === "day")?.value ?? "01",
-    hour: parts.find((part) => part.type === "hour")?.value ?? "00",
-    minute: parts.find((part) => part.type === "minute")?.value ?? "00",
   };
 };
 
 const getDhakaToday = () => {
-  const now = getDhakaNowParts();
+  const today = getDhakaDateParts();
 
-  return `${now.year}-${now.month}-${now.day}`;
+  return `${today.year}-${today.month}-${today.day}`;
 };
 
-const getDhakaNowStamp = () => {
-  const now = getDhakaNowParts();
+const getCurrentMonth = () => getDhakaToday().slice(0, 7);
+const getCurrentYear = () => getDhakaToday().slice(0, 4);
 
-  return `${now.year}-${now.month}-${now.day}T${now.hour}:${now.minute}:00`;
-};
+const isMealDeadlinePassed = (deadline: string) => {
+  const deadlineTime = Date.parse(deadline);
 
-const addDaysToDateString = (dateString: string, offsetDays: number) => {
-  const [year, month, day] = dateString.split("-").map(Number);
-  const utcDate = new Date(Date.UTC(year, month - 1, day + offsetDays));
-
-  return utcDate.toISOString().slice(0, 10);
-};
-
-const getMonthKey = (dateString: string) => dateString.slice(0, 7);
-
-const getUpcomingMonthKeys = () => {
-  const today = getDhakaToday();
-  const nextWeek = addDaysToDateString(today, 7);
-  const monthKeys = [getMonthKey(today), getMonthKey(nextWeek)];
-
-  return [...new Set(monthKeys)];
-};
-
-const getDeadlineStamp = (scheduleDate: string, deadline?: MealDeadline) => {
-  if (!deadline) {
-    return null;
-  }
-
-  const deadlineDate = addDaysToDateString(scheduleDate, deadline.offsetDays);
-
-  return `${deadlineDate}T${deadline.time}:00`;
-};
-
-const isDeadlinePassed = (scheduleDate: string, deadline: MealDeadline | undefined) => {
-  const deadlineStamp = getDeadlineStamp(scheduleDate, deadline);
-
-  if (!deadlineStamp) {
+  if (Number.isNaN(deadlineTime)) {
     return false;
   }
 
-  return getDhakaNowStamp() > deadlineStamp;
+  return Date.now() > deadlineTime;
 };
 
 const UserDashboardPage = () => {
   const queryClient = useQueryClient();
   const { appUser, user } = useAuth();
   const [pendingMealId, setPendingMealId] = useState<string | null>(null);
-  const upcomingMonthKeys = getUpcomingMonthKeys();
+  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth);
   const upcomingSchedulesQuery = useQuery({
-    queryKey: queryKeys.upcomingSchedules(upcomingMonthKeys),
-    queryFn: async () => {
-      const scheduleGroups = await Promise.all(
-        upcomingMonthKeys.map((month) => getSchedules({ month }))
-      );
-
-      return scheduleGroups.flat();
-    },
+    queryKey: queryKeys.upcomingSchedules([selectedMonth]),
+    queryFn: () => getSchedules({ month: selectedMonth }),
     enabled: Boolean(user),
   });
 
@@ -213,11 +175,6 @@ const UserDashboardPage = () => {
     queryKey: queryKeys.myRegistrations,
     queryFn: () => getRegistrations(),
     enabled: Boolean(user),
-  });
-
-  const deadlinesQuery = useQuery({
-    queryKey: queryKeys.mealDeadlines,
-    queryFn: () => getMealDeadlines(),
   });
 
   const registerMutation = useMutation({
@@ -248,37 +205,36 @@ const UserDashboardPage = () => {
     },
   });
 
-  if (
-    upcomingSchedulesQuery.isPending ||
-    registrationsQuery.isPending ||
-    deadlinesQuery.isPending
-  ) {
+  if (upcomingSchedulesQuery.isPending || registrationsQuery.isPending) {
     return <LoadingState label="Loading your upcoming meals..." />;
   }
 
-  if (
-    upcomingSchedulesQuery.isError ||
-    registrationsQuery.isError ||
-    deadlinesQuery.isError
-  ) {
-    return <LoadingState label="We couldn't load your meal dashboard." />;
+  if (upcomingSchedulesQuery.isError || registrationsQuery.isError) {
+    const errorMessage =
+      (upcomingSchedulesQuery.error instanceof Error && upcomingSchedulesQuery.error.message) ||
+      (registrationsQuery.error instanceof Error && registrationsQuery.error.message) ||
+      "We couldn't load your meal dashboard.";
+
+    return <LoadingState label={errorMessage} />;
   }
 
   const registrations = registrationsQuery.data ?? [];
-  const deadlines = deadlinesQuery.data ?? [];
-  const today = getDhakaToday();
-  const upcomingSchedules = (upcomingSchedulesQuery.data ?? [])
-    .filter((schedule) => schedule.date >= today)
-    .sort((left, right) => left.date.localeCompare(right.date))
-    .slice(0, 7);
+  const selectedYear = selectedMonth.slice(0, 4);
+  const selectedMonthValue = selectedMonth.slice(5, 7);
+  const yearOptions = Array.from({ length: 5 }, (_, index) =>
+    String(Number(getCurrentYear()) - 2 + index)
+  );
+  const selectedMonthSchedules = (upcomingSchedulesQuery.data ?? [])
+    .filter((schedule) => getDateKey(schedule.date).slice(0, 7) === selectedMonth)
+    .sort((left, right) => getDateKey(left.date).localeCompare(getDateKey(right.date)))
+    .filter((schedule) => schedule.meals.length > 0);
 
   const registrationByMealId = new Map(
     registrations.map((registration) => [registration.scheduledMealId, registration])
   );
-  const deadlineByType = new Map(deadlines.map((deadline) => [deadline.type, deadline]));
-  const totalUpcomingBookings = registrations
+  const totalMonthBookings = registrations
     .filter((registration) => {
-      const schedule = upcomingSchedules.find((entry) =>
+      const schedule = selectedMonthSchedules.find((entry) =>
         entry.meals.some((meal) => meal.id === registration.scheduledMealId)
       );
 
@@ -303,93 +259,98 @@ const UserDashboardPage = () => {
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-6 py-12">
       <PageIntro
         eyebrow="Member Area"
-        title="Upcoming meal bookings"
-        description="Register or cancel your upcoming breakfast, lunch, and dinner bookings. Deadlines follow Dhaka dining time."
+        title="Monthly meal bookings"
+        description="Pick a month to browse each scheduled day and manage your breakfast, lunch, and dinner bookings."
       />
 
-      <div className="grid gap-6 lg:grid-cols-[1.25fr_0.75fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle>This week at a glance</CardTitle>
-            <CardDescription>
-              Your next seven schedule dates with live booking controls.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-3">
-            <div className="rounded-[calc(var(--radius-field)+0.25rem)] border bg-muted/40 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-                Member
-              </p>
-              <p className="mt-3 text-lg font-semibold text-foreground">
-                {appUser?.name ?? user?.displayName ?? "Dining member"}
-              </p>
+      <div className="grid gap-6 md:grid-cols-[320px_minmax(0,1fr)] xl:grid-cols-[360px_minmax(0,1fr)]">
+        <div className="space-y-6">
+          <div className="flex flex-col gap-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+              Select month
+            </p>
+            <div className="grid max-w-xs gap-3 sm:grid-cols-2 md:grid-cols-1 xl:grid-cols-2">
+              <Select
+                value={selectedMonthValue}
+                onValueChange={(value) => setSelectedMonth(`${selectedYear}-${value}`)}
+              >
+                <SelectTrigger aria-label="Select month">
+                  <SelectValue placeholder="Month" />
+                </SelectTrigger>
+                <SelectContent>
+                  {monthOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={selectedYear}
+                onValueChange={(value) => setSelectedMonth(`${value}-${selectedMonthValue}`)}
+              >
+                <SelectTrigger aria-label="Select year">
+                  <SelectValue placeholder="Year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {yearOptions.map((year) => (
+                    <SelectItem key={year} value={year}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div className="rounded-[calc(var(--radius-field)+0.25rem)] border bg-muted/40 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-                Upcoming bookings
-              </p>
-              <p className="mt-3 text-3xl font-semibold text-foreground">
-                {totalUpcomingBookings}
-              </p>
-            </div>
-            <div className="rounded-[calc(var(--radius-field)+0.25rem)] border bg-muted/40 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-                Balance
-              </p>
-              <p className="mt-3 text-3xl font-semibold text-foreground">
-                {String(appUser?.balance ?? "0")}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Booking notes</CardTitle>
-            <CardDescription>
-              Availability and deadline checks are enforced by the backend as well.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 text-sm text-muted-foreground">
-            <div className="flex items-start gap-3">
-              <Clock3 className="mt-0.5 size-4 text-foreground" />
-              <p>Meal deadlines are evaluated in Dhaka business time, not your browser timezone.</p>
-            </div>
-            <div className="flex items-start gap-3">
-              <Check className="mt-0.5 size-4 text-foreground" />
-              <p>Registering creates or updates your booking with a default count of 1.</p>
-            </div>
-            <div className="flex items-start gap-3">
-              <Trash2 className="mt-0.5 size-4 text-foreground" />
-              <p>Cancelling removes your existing registration when the deadline still allows it.</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-5">
-        {upcomingSchedules.length ? (
-          upcomingSchedules.map((schedule) => (
-            <ScheduleCard
-              key={schedule.id}
-              schedule={schedule}
-              registrationByMealId={registrationByMealId}
-              deadlineByType={deadlineByType}
-              pendingMealId={pendingMealId}
-              onRegister={handleRegister}
-              onCancel={handleCancel}
-            />
-          ))
-        ) : (
           <Card>
             <CardHeader>
-              <CardTitle>No upcoming schedules</CardTitle>
-              <CardDescription>
-                There are no meal schedules available for the next few days yet.
-              </CardDescription>
+              <CardTitle>Month at a glance</CardTitle>
             </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2 md:grid-cols-1">
+              <div className="rounded-[calc(var(--radius-field)+0.25rem)] border bg-muted/40 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                  Bookings
+                </p>
+                <p className="mt-3 text-3xl font-semibold text-foreground">
+                  {totalMonthBookings}
+                </p>
+              </div>
+              <div className="rounded-[calc(var(--radius-field)+0.25rem)] border bg-muted/40 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                  Balance
+                </p>
+                <p className="mt-3 text-3xl font-semibold text-foreground">
+                  {String(appUser?.balance ?? "0")}
+                </p>
+              </div>
+            </CardContent>
           </Card>
-        )}
+        </div>
+
+        <div className="grid gap-5">
+          {selectedMonthSchedules.length ? (
+            selectedMonthSchedules.map((schedule) => (
+              <ScheduleCard
+                key={schedule.id}
+                schedule={schedule}
+                registrationByMealId={registrationByMealId}
+                pendingMealId={pendingMealId}
+                onRegister={handleRegister}
+                onCancel={handleCancel}
+              />
+            ))
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>No schedules for this month</CardTitle>
+                <CardDescription>
+                  No meal cards are available for {selectedMonth} yet.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          )}
+        </div>
       </div>
     </main>
   );
@@ -398,7 +359,6 @@ const UserDashboardPage = () => {
 type ScheduleCardProps = {
   schedule: MealSchedule;
   registrationByMealId: Map<string, MealRegistration>;
-  deadlineByType: Map<MealType, MealDeadline>;
   pendingMealId: string | null;
   onRegister: (scheduledMealId: string) => Promise<void>;
   onCancel: (registrationId: string, scheduledMealId: string) => Promise<void>;
@@ -407,7 +367,6 @@ type ScheduleCardProps = {
 const ScheduleCard = ({
   schedule,
   registrationByMealId,
-  deadlineByType,
   pendingMealId,
   onRegister,
   onCancel,
@@ -417,7 +376,7 @@ const ScheduleCard = ({
   );
 
   return (
-    <Card>
+    <Card className="w-full md:w-[24rem]">
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1">
@@ -426,34 +385,29 @@ const ScheduleCard = ({
               <span>{formatDateLabel(schedule.date)}</span>
             </CardTitle>
             <CardDescription>
-              {meals.length} meal option{meals.length === 1 ? "" : "s"} scheduled for this day.
+              {meals.length} available meal option{meals.length === 1 ? "" : "s"} for this day.
             </CardDescription>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {meals.map((meal, index) => {
+      <CardContent className="grid gap-4">
+        {meals.map((meal) => {
           const registration = registrationByMealId.get(meal.id);
-          const deadline = deadlineByType.get(meal.type);
-          const deadlinePassed = isDeadlinePassed(schedule.date, deadline);
+          const deadlinePassed = isMealDeadlinePassed(meal.deadline);
           const isUnavailable = !meal.isAvailable;
           const isBusy = pendingMealId === meal.id;
 
           return (
-            <div key={meal.id} className="space-y-4">
-              {index > 0 ? <Separator /> : null}
-              <MealRow
-                meal={meal}
-                scheduleDate={schedule.date}
-                registration={registration}
-                deadline={deadline}
-                deadlinePassed={deadlinePassed}
-                isUnavailable={isUnavailable}
-                isBusy={isBusy}
-                onRegister={onRegister}
-                onCancel={onCancel}
-              />
-            </div>
+            <MealRow
+              key={meal.id}
+              meal={meal}
+              registration={registration}
+              deadlinePassed={deadlinePassed}
+              isUnavailable={isUnavailable}
+              isBusy={isBusy}
+              onRegister={onRegister}
+              onCancel={onCancel}
+            />
           );
         })}
       </CardContent>
@@ -463,9 +417,7 @@ const ScheduleCard = ({
 
 type MealRowProps = {
   meal: ScheduledMeal;
-  scheduleDate: string;
   registration?: MealRegistration;
-  deadline?: MealDeadline;
   deadlinePassed: boolean;
   isUnavailable: boolean;
   isBusy: boolean;
@@ -475,9 +427,7 @@ type MealRowProps = {
 
 const MealRow = ({
   meal,
-  scheduleDate,
   registration,
-  deadline,
   deadlinePassed,
   isUnavailable,
   isBusy,
@@ -486,21 +436,11 @@ const MealRow = ({
 }: MealRowProps) => {
   const statusLabel = registration
     ? `Booked${registration.count > 1 ? ` x${registration.count}` : ""}`
-    : isUnavailable
-      ? "Unavailable"
-      : deadlinePassed
-        ? "Deadline passed"
-        : "Open";
-
-  const statusClassName = registration
-    ? "border-success/40 bg-success/10 text-success-foreground"
-    : isUnavailable || deadlinePassed
-      ? "border-border bg-muted/40 text-muted-foreground"
-      : "border-primary/30 bg-primary/10 text-primary-foreground";
+    : null;
 
   return (
-    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-      <div className="space-y-3">
+    <div className="flex h-full w-full flex-col rounded-[calc(var(--radius)+0.25rem)] border bg-card p-4">
+      <div className="flex min-h-24 flex-1 flex-col justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex size-10 items-center justify-center rounded-full border bg-muted/40">
             {meal.type === "BREAKFAST" ? (
@@ -511,25 +451,24 @@ const MealRow = ({
           </div>
           <div>
             <p className="text-base font-semibold text-foreground">{mealTypeLabels[meal.type]}</p>
-            <p className="text-sm text-muted-foreground">
-              Weight {String(meal.weight)}
-              {meal.menu ? ` • ${meal.menu}` : ""}
-            </p>
+            <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+              <IoCalculator />
+              <span>{String(meal.weight)}</span>
+            </div>
           </div>
-          <span
-            className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${statusClassName}`}
-          >
-            {statusLabel}
-          </span>
+          {statusLabel ? (
+            <span className="rounded-full border border-success/40 bg-success/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-success-foreground">
+              {statusLabel}
+            </span>
+          ) : null}
         </div>
 
-        <div className="space-y-1 text-sm text-muted-foreground">
-          <p>Deadline: {formatDeadlineLabel(scheduleDate, deadline)}</p>
-          <p>{isUnavailable ? "This meal is not available for registration." : "You can manage this meal from here."}</p>
+        <div className="min-h-12 rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
+          <p>{meal.menu || "Menu not specified"}</p>
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="mt-4 flex items-center gap-3">
         {registration ? (
           <Button
             type="button"
@@ -546,8 +485,14 @@ const MealRow = ({
             onClick={() => onRegister(meal.id)}
             disabled={isUnavailable || deadlinePassed || isBusy}
           >
-            {isBusy ? <Spinner className="size-4" /> : <Check />}
-            <span>Register</span>
+            {isBusy ? (
+              <Spinner className="size-4" />
+            ) : deadlinePassed ? (
+              <Info className="size-4" />
+            ) : (
+              <Check />
+            )}
+            <span>{deadlinePassed ? "Deadline Passed" : "Register"}</span>
           </Button>
         )}
       </div>
