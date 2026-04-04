@@ -14,6 +14,7 @@ import toast from "react-hot-toast";
 import { PageIntro } from "@/components/layout/page-intro";
 import { LoadingState } from "@/components/shared/loading-state";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Card,
   CardContent,
@@ -134,6 +135,23 @@ const getDhakaToday = () => {
 
 const getCurrentMonth = () => getDhakaToday().slice(0, 7);
 const getCurrentYear = () => getDhakaToday().slice(0, 4);
+const monthKeyToDate = (monthKey: string) => {
+  const [year, month] = monthKey.split("-").map(Number);
+
+  return new Date(year, month - 1, 1);
+};
+const dateKeyToDate = (dateKey: string) => {
+  const [year, month, day] = dateKey.split("-").map(Number);
+
+  return new Date(year, month - 1, day);
+};
+const dateToDateKey = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
 
 type CreateMealDraft = {
   type: MealType;
@@ -462,8 +480,8 @@ const MealSchedulePage = () => {
     <div className="space-y-8">
       <PageIntro
         eyebrow="Manager"
-        title="Meal schedule control"
-        description="Create Dhaka-date schedules, generate a whole month from the template, and maintain the meals members can register for."
+        title="Meal Schedule Control"
+        description="Manage meal schedules for each day of the month. Create new schedules, backfill from templates, and edit or delete existing ones as needed."
       />
 
       <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
@@ -471,7 +489,7 @@ const MealSchedulePage = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Sparkles className="size-5" />
-              <span>Generate monthly schedules</span>
+              <span>Generate Monthly Schedules</span>
             </CardTitle>
             <CardDescription>
               Backfill a month from the weekly meal template. Existing schedule dates stay untouched.
@@ -522,29 +540,52 @@ const MealSchedulePage = () => {
               disabled={generateMonthMutation.isPending}
             >
               {generateMonthMutation.isPending ? <Spinner className="size-4" /> : <Sparkles />}
-              <span>Generate month</span>
+              <span>Generate All Schedules</span>
             </Button>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CalendarDays className="size-5" />
-              <span>Create one schedule</span>
+            <CardTitle className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <CalendarDays className="size-5" />
+                <span>Create One schedule</span>
+              </div>
+              <Button
+                type="button"
+                onClick={handleCreateSchedule}
+                disabled={createScheduleMutation.isPending}
+              >
+                {createScheduleMutation.isPending ? <Spinner className="size-4" /> : <Plus />}
+                <span>Create schedule</span>
+              </Button>
             </CardTitle>
             <CardDescription>
               Use this when you need to add or repair a specific date manually.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-5">
+          <CardContent className="flex flex-col items-center md:flex-row gap-2">
             <div className="space-y-2">
-              <Label htmlFor="schedule-date">Schedule date</Label>
-              <Input
-                id="schedule-date"
-                type="date"
-                value={newScheduleDate}
-                onChange={(event) => setNewScheduleDate(event.target.value)}
+              <Label>Schedule date</Label>
+              <Calendar
+                className="rounded-2xl bg-muted p-4"
+                mode="single"
+                month={monthKeyToDate(selectedMonth)}
+                captionLayout="dropdown"
+                selected={dateKeyToDate(newScheduleDate)}
+                onMonthChange={(date) => {
+                  setSelectedMonth(dateToDateKey(date).slice(0, 7));
+                }}
+                onSelect={(date) => {
+                  if (!date) {
+                    return;
+                  }
+
+                  const nextDateKey = dateToDateKey(date);
+                  setNewScheduleDate(nextDateKey);
+                  setSelectedMonth(nextDateKey.slice(0, 7));
+                }}
               />
             </div>
 
@@ -614,15 +655,6 @@ const MealSchedulePage = () => {
                 </div>
               ))}
             </div>
-
-            <Button
-              type="button"
-              onClick={handleCreateSchedule}
-              disabled={createScheduleMutation.isPending}
-            >
-              {createScheduleMutation.isPending ? <Spinner className="size-4" /> : <Plus />}
-              <span>Create schedule</span>
-            </Button>
           </CardContent>
         </Card>
       </div>

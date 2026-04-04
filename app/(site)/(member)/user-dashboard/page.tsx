@@ -16,9 +16,7 @@ import toast from "react-hot-toast";
 import { PageIntro } from "@/components/layout/page-intro";
 import { LoadingState } from "@/components/shared/loading-state";
 import { Button } from "@/components/ui/button";
-import {
-  Calendar,
-} from "@/components/ui/calendar";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Card,
   CardContent,
@@ -27,14 +25,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  SelectGroup
-} from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import {
   createRegistration,
@@ -60,21 +50,6 @@ const mealTypeLabels: Record<MealType, string> = {
 };
 
 const mealTypeOptions: MealType[] = ["BREAKFAST", "LUNCH", "DINNER"];
-
-const monthOptions = [
-  { value: "01", label: "January" },
-  { value: "02", label: "February" },
-  { value: "03", label: "March" },
-  { value: "04", label: "April" },
-  { value: "05", label: "May" },
-  { value: "06", label: "June" },
-  { value: "07", label: "July" },
-  { value: "08", label: "August" },
-  { value: "09", label: "September" },
-  { value: "10", label: "October" },
-  { value: "11", label: "November" },
-  { value: "12", label: "December" },
-] as const;
 
 const weekdayFormatter = new Intl.DateTimeFormat("en-US", {
   weekday: "long",
@@ -152,7 +127,6 @@ const getDhakaToday = () => {
 };
 
 const getCurrentMonth = () => getDhakaToday().slice(0, 7);
-const getCurrentYear = () => getDhakaToday().slice(0, 4);
 const monthKeyToDate = (monthKey: string) => {
   const [year, month] = monthKey.split("-").map(Number);
 
@@ -261,11 +235,6 @@ const UserDashboardPage = () => {
   }
 
   const registrations = registrationsQuery.data ?? [];
-  const selectedYear = selectedMonth.slice(0, 4);
-  const selectedMonthValue = selectedMonth.slice(5, 7);
-  const yearOptions = Array.from({ length: 5 }, (_, index) =>
-    String(Number(getCurrentYear()) - 2 + index)
-  );
   const selectedMonthSchedules = (upcomingSchedulesQuery.data ?? [])
     .filter((schedule) => getDateKey(schedule.date).slice(0, 7) === selectedMonth)
     .sort((left, right) => getDateKey(left.date).localeCompare(getDateKey(right.date)))
@@ -321,7 +290,7 @@ const UserDashboardPage = () => {
   };
 
   return (
-    <main className="mx-auto flex max-w-6xl flex-1 flex-col gap-8">
+    <main className="mx-auto flex max-w-6xl flex-1 flex-col gap-4 px-4">
       <PageIntro
         title="Monthly Meal Bookings"
         description="Pick a month to browse each scheduled day and manage your breakfast, lunch, and dinner bookings."
@@ -331,42 +300,28 @@ const UserDashboardPage = () => {
         <div className="space-y-6">
           <div className="flex flex-col gap-2">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-              Select month
+              Select date
             </p>
-            <Select
-              value={selectedMonthValue}
-              onValueChange={(value) => setSelectedMonth(`${selectedYear}-${value}`)}
-            >
-              <SelectTrigger aria-label="Select month">
-                <SelectValue placeholder="Month" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {monthOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={selectedYear}
-              onValueChange={(value) => setSelectedMonth(`${value}-${selectedMonthValue}`)}
-            >
-              <SelectTrigger aria-label="Select year">
-                <SelectValue placeholder="Year" />
-              </SelectTrigger>
-              <SelectContent>
-                {yearOptions.map((year) => (
-                  <SelectItem key={year} value={year}>
-                    {year}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
+          <Calendar className="w-full p-4 rounded-2xl bg-muted"
+            mode="single"
+            month={monthKeyToDate(selectedMonth)}
+            captionLayout="dropdown"
+            selected={dateKeyToDate(effectiveSelectedDateKey)}
+            onMonthChange={(date) => {
+              setSelectedMonth(dateToDateKey(date).slice(0, 7));
+            }}
+            onSelect={(date) => {
+              if (date) {
+                const nextDateKey = dateToDateKey(date);
+                setSelectedMonth(nextDateKey.slice(0, 7));
+                setSelectedDateKey(nextDateKey);
+              }
+            }}
+            modifiers={{
+              scheduled: (date) => scheduledDateKeys.has(dateToDateKey(date)),
+            }}
+          />
 
           <Card>
             <CardHeader>
@@ -392,33 +347,11 @@ const UserDashboardPage = () => {
             </CardContent>
           </Card>
         </div>
-                  <Calendar
-                    variant="bookedDates"
-                    mode="single"
-                    month={monthKeyToDate(selectedMonth)}
-                    selected={dateKeyToDate(effectiveSelectedDateKey)}
-                    onSelect={(date) => {
-                      if (date) {
-                        setSelectedDateKey(dateToDateKey(date));
-                      }
-                    }}
-                    modifiers={{
-                      scheduled: (date) => scheduledDateKeys.has(dateToDateKey(date)),
-                    }}
-                  />
-        <div className="space-y-4 md:w-[24rem]">
+        <div className="space-y-2 md:w-[24rem]">
+          <p className="text-2xl">Available Meals</p>
           {selectedMonthSchedules.length ? (
-            <Card className="w-full">
-              <CardHeader>
-                <CardTitle>Schedule Calendar</CardTitle>
-                <CardDescription>
-                  Pick a date to view the meals scheduled for that day.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="rounded-lg border bg-muted/30 p-2">
-                </div>
-
+            <div className="w-full">
+              <div>
                 {selectedSchedule ? (
                   <ScheduleCard
                     schedule={selectedSchedule}
@@ -433,8 +366,8 @@ const UserDashboardPage = () => {
                     No meal schedule is available for {formatDateLabel(effectiveSelectedDateKey)}.
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           ) : (
             <Card>
               <CardHeader>
@@ -610,7 +543,7 @@ const MealRow = ({
 
   return (
     <div
-      className={`flex h-full w-full flex-col rounded-lg bg-card p-4`}
+      className={`flex h-full w-full flex-col rounded-lg bg-card p-4 ${registration && "ring ring-primary/50"}`}
     >
       <div className="flex min-h-24 flex-1 flex-col justify-between gap-3">
         <div className="flex items-start justify-between gap-3">
@@ -631,7 +564,7 @@ const MealRow = ({
             </div>
           </div>
           {registration ? (
-            <div className="flex items-center gap-2">
+            <div className="items-center gap-2">
               <Button
                 type="button"
                 variant="outline"
