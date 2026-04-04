@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   BanknoteArrowDown,
+  Check,
+  ChevronsUpDown,
   HandCoins,
   Landmark,
   Lock,
@@ -18,8 +20,10 @@ import { PageIntro } from "@/components/layout/page-intro";
 import { LoadingState } from "@/components/shared/loading-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
@@ -147,17 +151,17 @@ const formatMonthLabel = (value: string) => {
   return monthFormatter.format(parsed);
 };
 
+const getMonthFromDate = (value: string) => value.slice(0, 7);
+
 const buildDepositFormState = (defaultUserId = "") => ({
   userId: defaultUserId,
   amount: "",
-  month: getCurrentMonth(),
   note: "",
   date: getDhakaToday(),
 });
 
 const buildExpenseFormState = () => ({
   amount: "",
-  month: getCurrentMonth(),
   date: getDhakaToday(),
   category: "BAZAR" as ExpenseCategory,
   personName: "",
@@ -210,6 +214,87 @@ function SummaryMetric({
         {value}
       </p>
     </div>
+  );
+}
+
+function MemberPicker({
+  value,
+  members,
+  onChange,
+  placeholder = "Select member",
+}: {
+  value: string;
+  members: AppUser[];
+  onChange: (value: string) => void;
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const normalizedSearch = search.trim().toLowerCase();
+  const filteredMembers = members.filter((member) => {
+    if (!normalizedSearch) {
+      return true;
+    }
+
+    return (
+      member.name.toLowerCase().includes(normalizedSearch) ||
+      member.email.toLowerCase().includes(normalizedSearch)
+    );
+  });
+
+  const selectedMember = members.find((member) => member.id === value) ?? null;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between font-normal"
+        >
+          <span className={cn("truncate", !selectedMember && "text-muted-foreground")}>
+            {selectedMember ? selectedMember.name : placeholder}
+          </span>
+          <ChevronsUpDown className="size-4 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
+        <div className="border-b p-2">
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search member..."
+          />
+        </div>
+        <div className="max-h-64 overflow-y-auto p-1">
+          {filteredMembers.length ? (
+            filteredMembers.map((member) => (
+              <button
+                key={member.id}
+                type="button"
+                className="focus:bg-accent focus:text-accent-foreground flex w-full items-center justify-between rounded-md px-2 py-2 text-left text-sm outline-none hover:bg-accent"
+                onClick={() => {
+                  onChange(member.id);
+                  setOpen(false);
+                  setSearch("");
+                }}
+              >
+                <span className="min-w-0">
+                  <span className="block truncate font-medium">{member.name}</span>
+                  <span className="block truncate text-xs text-muted-foreground">{member.email}</span>
+                </span>
+                <Check className={cn("size-4 shrink-0", member.id === value ? "opacity-100" : "opacity-0")} />
+              </button>
+            ))
+          ) : (
+            <div className="px-2 py-4 text-center text-sm text-muted-foreground">No member found.</div>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -409,7 +494,7 @@ export default function FundManagementPage() {
     await createDepositMutation.mutateAsync({
       userId: selectedDepositUserId,
       amount,
-      month: depositForm.month,
+      month: getMonthFromDate(depositForm.date),
       ...(depositForm.note.trim() ? { note: depositForm.note.trim() } : {}),
       ...(depositForm.date ? { date: depositForm.date } : {}),
     });
@@ -430,7 +515,7 @@ export default function FundManagementPage() {
 
     await createExpenseMutation.mutateAsync({
       amount,
-      month: expenseForm.month,
+      month: getMonthFromDate(expenseForm.date),
       category: expenseForm.category,
       personName: expenseForm.personName.trim(),
       ...(expenseForm.description.trim() ? { description: expenseForm.description.trim() } : {}),
@@ -651,21 +736,11 @@ export default function FundManagementPage() {
           <CardContent className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label>Member</Label>
-              <Select
+              <MemberPicker
                 value={selectedDepositUserId}
-                onValueChange={(value) => setDepositForm((current) => ({ ...current, userId: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select member" />
-                </SelectTrigger>
-                <SelectContent>
-                  {memberUsers.map((member) => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                members={memberUsers}
+                onChange={(value) => setDepositForm((current) => ({ ...current, userId: value }))}
+              />
             </div>
 
             <div className="space-y-2">
@@ -682,22 +757,11 @@ export default function FundManagementPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="deposit-month">Month</Label>
-              <Input
-                id="deposit-month"
-                type="month"
-                value={depositForm.month}
-                onChange={(event) => setDepositForm((current) => ({ ...current, month: event.target.value }))}
-              />
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="deposit-date">Date</Label>
-              <Input
+              <DatePicker
                 id="deposit-date"
-                type="date"
                 value={depositForm.date}
-                onChange={(event) => setDepositForm((current) => ({ ...current, date: event.target.value }))}
+                onChange={(value) => setDepositForm((current) => ({ ...current, date: value }))}
               />
             </div>
 
@@ -774,22 +838,11 @@ export default function FundManagementPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="expense-month">Month</Label>
-              <Input
-                id="expense-month"
-                type="month"
-                value={expenseForm.month}
-                onChange={(event) => setExpenseForm((current) => ({ ...current, month: event.target.value }))}
-              />
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="expense-date">Date</Label>
-              <Input
+              <DatePicker
                 id="expense-date"
-                type="date"
                 value={expenseForm.date}
-                onChange={(event) => setExpenseForm((current) => ({ ...current, date: event.target.value }))}
+                onChange={(value) => setExpenseForm((current) => ({ ...current, date: value }))}
               />
             </div>
 
@@ -833,26 +886,16 @@ export default function FundManagementPage() {
                       <div className="grid gap-3 md:grid-cols-2">
                         <div className="space-y-2">
                           <Label>Member</Label>
-                          <Select
+                          <MemberPicker
                             value={editor.userId}
-                            onValueChange={(value) =>
+                            members={memberUsers}
+                            onChange={(value) =>
                               setDepositEditors((current) => ({
                                 ...current,
                                 [deposit.id]: { ...editor, userId: value },
                               }))
                             }
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select member" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {memberUsers.map((member) => (
-                                <SelectItem key={member.id} value={member.id}>
-                                  {member.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          />
                         </div>
 
                         <div className="space-y-2">
@@ -887,13 +930,12 @@ export default function FundManagementPage() {
 
                         <div className="space-y-2">
                           <Label>Date</Label>
-                          <Input
-                            type="date"
+                          <DatePicker
                             value={editor.date}
-                            onChange={(event) =>
+                            onChange={(value) =>
                               setDepositEditors((current) => ({
                                 ...current,
-                                [deposit.id]: { ...editor, date: event.target.value },
+                                [deposit.id]: { ...editor, date: value },
                               }))
                             }
                           />
@@ -1093,13 +1135,12 @@ export default function FundManagementPage() {
 
                       <div className="space-y-2">
                         <Label>Date</Label>
-                        <Input
-                          type="date"
+                        <DatePicker
                           value={editor.date}
-                          onChange={(event) =>
+                          onChange={(value) =>
                             setExpenseEditors((current) => ({
                               ...current,
-                              [expense.id]: { ...editor, date: event.target.value },
+                              [expense.id]: { ...editor, date: value },
                             }))
                           }
                         />
