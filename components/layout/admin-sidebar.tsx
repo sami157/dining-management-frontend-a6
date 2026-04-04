@@ -11,7 +11,7 @@ const adminLinks = [
   { href: "/admin-dashboard/configuration", label: "Configuration" },
   { href: "/admin-dashboard/meal-schedule", label: "Meal Schedule" },
   { href: "/admin-dashboard/fund-management", label: "Fund Management" },
-  { href: "/admin-dashboard/member-management", label: "Member Management" },
+  { href: "/admin-dashboard/member-management", label: "Registration Management" },
   { href: "/admin-dashboard/history", label: "History" },
 ];
 
