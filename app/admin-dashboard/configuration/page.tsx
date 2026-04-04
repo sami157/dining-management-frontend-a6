@@ -210,7 +210,7 @@ const ConfigurationPage = () => {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-5xl mx-auto">
       <PageIntro
         eyebrow="Manager"
         title="Configuration"

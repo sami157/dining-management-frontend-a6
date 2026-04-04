@@ -30,7 +30,7 @@ import {
   SelectGroup,
   SelectItem,
   SelectTrigger,
-  SelectValue,
+  SelectValue
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
@@ -109,6 +109,15 @@ const formatScheduleDate = (dateString: string) => {
 
   return `${weekdayFormatter.format(date)}, ${dateFormatter.format(date)}`;
 };
+const getScheduleDateKey = (dateString: string) => {
+  const date = parseScheduleDate(dateString);
+
+  if (!date) {
+    return dateString.includes("T") ? dateString.slice(0, 10) : dateString;
+  }
+
+  return date.toISOString().slice(0, 10);
+};
 
 const getDhakaDateParts = (date = new Date()) => {
   const formatter = new Intl.DateTimeFormat("en-CA", {
@@ -158,7 +167,6 @@ type CreateMealDraft = {
   enabled: boolean;
   weight: string;
   menu: string;
-  isAvailable: boolean;
 };
 
 type MealEditorState = {
@@ -180,7 +188,6 @@ const createDefaultMealDrafts = (): CreateMealDraft[] =>
     enabled: type !== "DINNER",
     weight: "1",
     menu: "",
-    isAvailable: true,
   }));
 
 const mapMealToEditor = (meal: ScheduledMeal): MealEditorState => ({
@@ -315,7 +322,9 @@ const MealSchedulePage = () => {
 
   const schedules = useMemo(
     () =>
-      [...(schedulesQuery.data ?? [])].sort((left, right) => left.date.localeCompare(right.date)),
+      [...(schedulesQuery.data ?? [])].sort((left, right) =>
+        getScheduleDateKey(left.date).localeCompare(getScheduleDateKey(right.date))
+      ),
     [schedulesQuery.data]
   );
 
@@ -338,7 +347,7 @@ const MealSchedulePage = () => {
         type: draft.type,
         weight: Number(draft.weight),
         menu: draft.menu.trim(),
-        isAvailable: draft.isAvailable,
+        isAvailable: true,
       }))
       .filter((draft) => Number.isFinite(draft.weight) && draft.weight > 0);
 
@@ -470,87 +479,21 @@ const MealSchedulePage = () => {
     return <LoadingState label="We couldn't load the meal schedules." />;
   }
 
-  const selectedYear = selectedMonth.slice(0, 4);
-  const selectedMonthValue = selectedMonth.slice(5, 7);
-  const yearOptions = Array.from({ length: 5 }, (_, index) =>
-    String(Number(getCurrentYear()) - 2 + index)
-  );
-
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 mx-auto max-w-5xl">
       <PageIntro
         eyebrow="Manager"
         title="Meal Schedule Control"
         description="Manage meal schedules for each day of the month. Create new schedules, backfill from templates, and edit or delete existing ones as needed."
       />
 
-      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Sparkles className="size-5" />
-              <span>Generate Monthly Schedules</span>
-            </CardTitle>
-            <CardDescription>
-              Backfill a month from the weekly meal template. Existing schedule dates stay untouched.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Month</Label>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Select
-                  value={selectedMonthValue}
-                  onValueChange={(value) => setSelectedMonth(`${selectedYear}-${value}`)}
-                >
-                  <SelectTrigger aria-label="Select month">
-                    <SelectValue placeholder="Month" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      {monthOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-
-                <Select
-                  value={selectedYear}
-                  onValueChange={(value) => setSelectedMonth(`${value}-${selectedMonthValue}`)}
-                >
-                  <SelectTrigger aria-label="Select year">
-                    <SelectValue placeholder="Year" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {yearOptions.map((year) => (
-                      <SelectItem key={year} value={year}>
-                        {year}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <Button
-              type="button"
-              onClick={handleGenerateMonth}
-              disabled={generateMonthMutation.isPending}
-            >
-              {generateMonthMutation.isPending ? <Spinner className="size-4" /> : <Sparkles />}
-              <span>Generate All Schedules</span>
-            </Button>
-          </CardContent>
-        </Card>
-
+      <div className="grid gap-6 md:grid-cols-1">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <CalendarDays className="size-5" />
-                <span>Create One schedule</span>
+                <span>Generate Schedule(s)</span>
               </div>
               <Button
                 type="button"
@@ -558,18 +501,30 @@ const MealSchedulePage = () => {
                 disabled={createScheduleMutation.isPending}
               >
                 {createScheduleMutation.isPending ? <Spinner className="size-4" /> : <Plus />}
-                <span>Create schedule</span>
+                <span>Generate Day</span>
               </Button>
             </CardTitle>
             <CardDescription>
-              Use this when you need to add or repair a specific date manually.
+              <div className="flex items-center justify-between">
+                <p>
+                  Use this when you need to add or repair a specific date manually.
+                </p>
+                <Button
+                  type="button"
+                  onClick={handleGenerateMonth}
+                  disabled={generateMonthMutation.isPending}
+                >
+                  {generateMonthMutation.isPending ? <Spinner className="size-4" /> : <Sparkles />}
+                  <span>Generate Full Month</span>
+                </Button>
+              </div>
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col items-center md:flex-row gap-2">
+          <CardContent className="flex flex-col items-center md:flex-row gap-4 justify-between">
             <div className="space-y-2">
-              <Label>Schedule date</Label>
+              <Label>Select Date</Label>
               <Calendar
-                className="rounded-2xl bg-muted p-4"
+                className="rounded-2xl border p-4"
                 mode="single"
                 month={monthKeyToDate(selectedMonth)}
                 captionLayout="dropdown"
@@ -628,7 +583,7 @@ const MealSchedulePage = () => {
                       <Label htmlFor={`menu-${draft.type}`}>Menu</Label>
                       <Input
                         id={`menu-${draft.type}`}
-                        placeholder="Rice, fish, vegetables"
+                        placeholder=""
                         value={draft.menu}
                         onChange={(event) =>
                           handleCreateMealDraftChange(draft.type, "menu", event.target.value)
@@ -636,21 +591,6 @@ const MealSchedulePage = () => {
                         disabled={!draft.enabled}
                       />
                     </div>
-                    <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <input
-                        type="checkbox"
-                        checked={draft.isAvailable}
-                        onChange={(event) =>
-                          handleCreateMealDraftChange(
-                            draft.type,
-                            "isAvailable",
-                            event.target.checked
-                          )
-                        }
-                        disabled={!draft.enabled}
-                      />
-                      <span>Available for booking</span>
-                    </label>
                   </div>
                 </div>
               ))}
@@ -666,141 +606,131 @@ const MealSchedulePage = () => {
             Edit meal weight, availability, and menu inline. Delete empty or mistaken schedule dates when needed.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent>
           {schedules.length ? (
-            schedules.map((schedule, scheduleIndex) => {
-              const existingTypes = new Set(schedule.meals.map((meal) => meal.type));
-              const availableMealTypes = mealTypeOptions.filter((type) => !existingTypes.has(type));
-              const addDraft = addMealDrafts[schedule.id] ?? {
-                type: availableMealTypes[0] ?? "DINNER",
-                weight: "1",
-                menu: "",
-                isAvailable: true,
-              };
+            <div className="grid gap-6 md:grid-cols-2 2xl:grid-cols-3">
+              {schedules.map((schedule) => {
+                const existingTypes = new Set(schedule.meals.map((meal) => meal.type));
+                const availableMealTypes = mealTypeOptions.filter((type) => !existingTypes.has(type));
+                const addDraft = addMealDrafts[schedule.id] ?? {
+                  type: availableMealTypes[0] ?? "DINNER",
+                  weight: "1",
+                  menu: "",
+                  isAvailable: true,
+                };
 
-              return (
-                <div key={schedule.id} className="space-y-5">
-                  {scheduleIndex > 0 ? <Separator /> : null}
+                return (
+                  <div
+                    key={schedule.id}
+                    className="flex h-full flex-col space-y-5 rounded-[calc(var(--radius)+0.5rem)] bg-card p-5"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                      <div className="space-y-1">
+                        <h3 className="text-lg font-semibold text-foreground">
+                          {formatScheduleDate(schedule.date)}
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          {schedule.meals.length} configured meal
+                          {schedule.meals.length === 1 ? "" : "s"} for this date.
+                        </p>
+                      </div>
 
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div className="space-y-1">
-                      <h3 className="text-lg font-semibold text-foreground">
-                        {formatScheduleDate(schedule.date)}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {schedule.meals.length} configured meal
-                        {schedule.meals.length === 1 ? "" : "s"} for this date.
-                      </p>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        onClick={() => handleDeleteSchedule(schedule.id)}
+                        disabled={deleteScheduleMutation.isPending}
+                      >
+                        {deleteScheduleMutation.isPending ? (
+                          <Spinner className="size-4" />
+                        ) : (
+                          <Trash2 />
+                        )}
+                        <span>Delete day</span>
+                      </Button>
                     </div>
 
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      onClick={() => handleDeleteSchedule(schedule.id)}
-                      disabled={deleteScheduleMutation.isPending}
-                    >
-                      {deleteScheduleMutation.isPending ? (
-                        <Spinner className="size-4" />
-                      ) : (
-                        <Trash2 />
-                      )}
-                      <span>Delete day</span>
-                    </Button>
-                  </div>
+                    <Separator />
 
-                  <div className="grid gap-4">
-                    {schedule.meals
-                      .slice()
-                      .sort(
-                        (left, right) =>
-                          mealTypeOptions.indexOf(left.type) - mealTypeOptions.indexOf(right.type)
-                      )
-                      .map((meal) => {
-                        const editorKey = `${schedule.id}:${meal.type}`;
-                        const editor = mealEditors[editorKey] ?? mapMealToEditor(meal);
+                    <div className="grid gap-4">
+                      {schedule.meals
+                        .slice()
+                        .sort(
+                          (left, right) =>
+                            mealTypeOptions.indexOf(left.type) - mealTypeOptions.indexOf(right.type)
+                        )
+                        .map((meal) => {
+                          const editorKey = `${schedule.id}:${meal.type}`;
+                          const editor = mealEditors[editorKey] ?? mapMealToEditor(meal);
 
-                        return (
-                          <div
-                            key={meal.id}
-                            className="rounded-[calc(var(--radius)+0.25rem)] border bg-muted/25 p-4"
-                          >
-                            <div className="flex flex-wrap items-start justify-between gap-4">
-                              <div className="space-y-1">
-                                <p className="flex items-center gap-2 font-semibold text-foreground">
-                                  <UtensilsCrossed className="size-4" />
-                                  <span>{mealTypeLabels[meal.type]}</span>
-                                </p>
-                                <p className="text-sm text-muted-foreground">
-                                  Existing meal on {schedule.date}
-                                </p>
+                          return (
+                            <div
+                              key={meal.id}
+                              className="rounded-[calc(var(--radius)+0.25rem)] bg-muted p-4"
+                            >
+                              <div className="flex flex-wrap items-start justify-between gap-4">
+                                <div className="space-y-1">
+                                  <p className="flex items-center gap-2 font-semibold text-foreground">
+                                    <UtensilsCrossed className="size-4" />
+                                    <span>{mealTypeLabels[meal.type]}</span>
+                                  </p>
+                                </div>
+
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDeleteMeal(schedule.id, meal.type)}
+                                  disabled={deleteMealMutation.isPending}
+                                  className="text-destructive hover:text-destructive"
+                                  aria-label={`Remove ${mealTypeLabels[meal.type]} meal`}
+                                >
+                                  {deleteMealMutation.isPending ? (
+                                    <Spinner className="size-4" />
+                                  ) : (
+                                    <Trash2 />
+                                  )}
+                                </Button>
                               </div>
 
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                onClick={() => handleDeleteMeal(schedule.id, meal.type)}
-                                disabled={deleteMealMutation.isPending}
-                              >
-                                {deleteMealMutation.isPending ? (
-                                  <Spinner className="size-4" />
-                                ) : (
-                                  <Trash2 />
-                                )}
-                                <span>Remove meal</span>
-                              </Button>
-                            </div>
-
-                            <div className="mt-4 grid gap-4 md:grid-cols-[0.2fr_0.5fr_0.3fr]">
-                              <div className="space-y-1">
-                                <Label htmlFor={`${editorKey}-weight`}>Weight</Label>
-                                <Input
-                                  id={`${editorKey}-weight`}
-                                  type="number"
-                                  min="0.25"
-                                  step="0.25"
-                                  value={editor.weight}
-                                  onChange={(event) =>
-                                    handleMealEditorChange(
-                                      schedule.id,
-                                      meal.type,
-                                      "weight",
-                                      event.target.value
-                                    )
-                                  }
-                                />
-                              </div>
-                              <div className="space-y-1">
-                                <Label htmlFor={`${editorKey}-menu`}>Menu</Label>
-                                <Input
-                                  id={`${editorKey}-menu`}
-                                  placeholder="Rice and beef"
-                                  value={editor.menu}
-                                  onChange={(event) =>
-                                    handleMealEditorChange(
-                                      schedule.id,
-                                      meal.type,
-                                      "menu",
-                                      event.target.value
-                                    )
-                                  }
-                                />
-                              </div>
-                              <div className="flex flex-col justify-between gap-3">
-                                <label className="flex items-center gap-2 pt-7 text-sm text-muted-foreground">
-                                  <input
-                                    type="checkbox"
-                                    checked={editor.isAvailable}
+                              <div className="mt-4 grid gap-4 sm:grid-cols-[0.28fr_0.72fr]">
+                                <div className="space-y-1">
+                                  <Label htmlFor={`${editorKey}-weight`}>Weight</Label>
+                                  <Input
+                                    id={`${editorKey}-weight`}
+                                    type="number"
+                                    min="0.25"
+                                    step="0.25"
+                                    value={editor.weight}
                                     onChange={(event) =>
                                       handleMealEditorChange(
                                         schedule.id,
                                         meal.type,
-                                        "isAvailable",
-                                        event.target.checked
+                                        "weight",
+                                        event.target.value
                                       )
                                     }
                                   />
-                                  <span>Available</span>
-                                </label>
+                                </div>
+                                <div className="space-y-1 sm:min-w-0">
+                                  <Label htmlFor={`${editorKey}-menu`}>Menu</Label>
+                                  <Input
+                                    id={`${editorKey}-menu`}
+                                    placeholder=""
+                                    value={editor.menu}
+                                    onChange={(event) =>
+                                      handleMealEditorChange(
+                                        schedule.id,
+                                        meal.type,
+                                        "menu",
+                                        event.target.value
+                                      )
+                                    }
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="mt-4 flex justify-end">
                                 <Button
                                   type="button"
                                   onClick={() => handleSaveMeal(schedule.id, meal)}
@@ -811,99 +741,102 @@ const MealSchedulePage = () => {
                                   ) : (
                                     <Save />
                                   )}
-                                  <span>Save meal</span>
+                                  <span>Save</span>
                                 </Button>
                               </div>
                             </div>
-                          </div>
-                        );
-                      })}
-                  </div>
-
-                  {availableMealTypes.length ? (
-                    <div className="rounded-[calc(var(--radius)+0.25rem)] border border-dashed bg-card p-4">
-                      <div className="flex flex-wrap items-end gap-4">
-                        <div className="space-y-1">
-                          <Label htmlFor={`${schedule.id}-new-type`}>Missing meal</Label>
-                          <select
-                            id={`${schedule.id}-new-type`}
-                            className="flex h-10 rounded-[calc(var(--radius-field)+0.125rem)] border bg-white px-3 py-2 text-sm outline-none"
-                            value={addDraft.type}
-                            onChange={(event) =>
-                              handleAddMealDraftChange(
-                                schedule.id,
-                                "type",
-                                event.target.value as MealType
-                              )
-                            }
-                          >
-                            {availableMealTypes.map((type) => (
-                              <option key={type} value={type}>
-                                {mealTypeLabels[type]}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="space-y-1">
-                          <Label htmlFor={`${schedule.id}-new-weight`}>Weight</Label>
-                          <Input
-                            id={`${schedule.id}-new-weight`}
-                            type="number"
-                            min="0.25"
-                            step="0.25"
-                            value={addDraft.weight}
-                            onChange={(event) =>
-                              handleAddMealDraftChange(schedule.id, "weight", event.target.value)
-                            }
-                          />
-                        </div>
-
-                        <div className="space-y-1">
-                          <Label htmlFor={`${schedule.id}-new-menu`}>Menu</Label>
-                          <Input
-                            id={`${schedule.id}-new-menu`}
-                            placeholder="Khichuri"
-                            value={addDraft.menu}
-                            onChange={(event) =>
-                              handleAddMealDraftChange(schedule.id, "menu", event.target.value)
-                            }
-                          />
-                        </div>
-
-                        <label className="flex items-center gap-2 pb-2 text-sm text-muted-foreground">
-                          <input
-                            type="checkbox"
-                            checked={addDraft.isAvailable}
-                            onChange={(event) =>
-                              handleAddMealDraftChange(
-                                schedule.id,
-                                "isAvailable",
-                                event.target.checked
-                              )
-                            }
-                          />
-                          <span>Available</span>
-                        </label>
-
-                        <Button
-                          type="button"
-                          onClick={() => handleAddMeal(schedule)}
-                          disabled={addMealMutation.isPending}
-                        >
-                          {addMealMutation.isPending ? (
-                            <Spinner className="size-4" />
-                          ) : (
-                            <Plus />
-                          )}
-                          <span>Add meal</span>
-                        </Button>
-                      </div>
+                          );
+                        })}
                     </div>
-                  ) : null}
-                </div>
-              );
-            })
+
+                    {availableMealTypes.length ? (
+                      <div className="rounded-[calc(var(--radius)+0.25rem)] border border-dashed bg-card p-4">
+                        <div className="flex flex-wrap items-end gap-4">
+                          <div className="space-y-1">
+                            <Label htmlFor={`${schedule.id}-new-type`}>Missing meal</Label>
+                            <Select
+                              value={addDraft.type}
+                              onValueChange={(value) =>
+                                handleAddMealDraftChange(
+                                  schedule.id,
+                                  "type",
+                                  value as MealType
+                                )
+                              }
+                            >
+                              <SelectTrigger id={`${schedule.id}-new-type`}>
+                                <SelectValue>{mealTypeLabels[addDraft.type]}</SelectValue>
+                              </SelectTrigger>
+                              <SelectContent>
+                                {availableMealTypes.map((type) => (
+                                  <SelectItem key={type} value={type}>
+                                    {mealTypeLabels[type]}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-1">
+                            <Label htmlFor={`${schedule.id}-new-weight`}>Weight</Label>
+                            <Input
+                              id={`${schedule.id}-new-weight`}
+                              type="number"
+                              min="0.25"
+                              step="0.25"
+                              value={addDraft.weight}
+                              onChange={(event) =>
+                                handleAddMealDraftChange(schedule.id, "weight", event.target.value)
+                              }
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <Label htmlFor={`${schedule.id}-new-menu`}>Menu</Label>
+                            <Input
+                              id={`${schedule.id}-new-menu`}
+                              placeholder=""
+                              value={addDraft.menu}
+                              onChange={(event) =>
+                                handleAddMealDraftChange(schedule.id, "menu", event.target.value)
+                              }
+                            />
+                          </div>
+
+                          <label className="flex items-center gap-2 pb-2 text-sm text-muted-foreground">
+                            <input
+                              type="checkbox"
+                              checked={addDraft.isAvailable}
+                              onChange={(event) =>
+                                handleAddMealDraftChange(
+                                  schedule.id,
+                                  "isAvailable",
+                                  event.target.checked
+                                )
+                              }
+                            />
+                            <span>Available</span>
+                          </label>
+
+                          <Button
+                            type="button"
+                            onClick={() => handleAddMeal(schedule)}
+                            disabled={addMealMutation.isPending}
+                          >
+                            {addMealMutation.isPending ? (
+                              <Spinner className="size-4" />
+                            ) : (
+                              <Plus />
+                            )}
+                            <span>Add Meal</span>
+                          </Button>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
           ) : (
             <div className="rounded-[calc(var(--radius)+0.25rem)] border border-dashed bg-muted/20 p-8 text-sm text-muted-foreground">
               No schedules found for {selectedMonth}. Generate the month or create a day manually.
