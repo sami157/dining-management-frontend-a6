@@ -13,7 +13,8 @@ const parseDateValue = (value?: string) => {
     return undefined
   }
 
-  const [year, month, day] = value.split("-").map(Number)
+  const normalizedValue = value.includes("T") ? value.slice(0, 10) : value
+  const [year, month, day] = normalizedValue.split("-").map(Number)
 
   if (!year || !month || !day) {
     return undefined

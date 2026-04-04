@@ -151,6 +151,7 @@ const formatMonthLabel = (value: string) => {
   return monthFormatter.format(parsed);
 };
 
+const normalizeDateValue = (value: string) => (value.includes("T") ? value.slice(0, 10) : value);
 const getMonthFromDate = (value: string) => value.slice(0, 7);
 
 const buildDepositFormState = (defaultUserId = "") => ({
@@ -171,15 +172,13 @@ const buildExpenseFormState = () => ({
 const mapDepositToEditor = (deposit: Deposit) => ({
   userId: deposit.userId,
   amount: String(deposit.amount),
-  month: deposit.month,
   note: deposit.note ?? "",
-  date: deposit.date,
+  date: normalizeDateValue(deposit.date),
 });
 
 const mapExpenseToEditor = (expense: Expense) => ({
   amount: String(expense.amount),
-  month: expense.month,
-  date: expense.date,
+  date: normalizeDateValue(expense.date),
   category: expense.category,
   personName: expense.personName,
   description: expense.description ?? "",
@@ -547,7 +546,7 @@ export default function FundManagementPage() {
       payload: {
         userId: editor.userId,
         amount,
-        month: editor.month,
+        month: getMonthFromDate(editor.date),
         note: editor.note.trim(),
         date: editor.date,
       },
@@ -577,7 +576,7 @@ export default function FundManagementPage() {
       id: expenseId,
       payload: {
         amount,
-        month: editor.month,
+        month: getMonthFromDate(editor.date),
         date: editor.date,
         category: editor.category,
         personName: editor.personName.trim(),
@@ -915,20 +914,6 @@ export default function FundManagementPage() {
                         </div>
 
                         <div className="space-y-2">
-                          <Label>Month</Label>
-                          <Input
-                            type="month"
-                            value={editor.month}
-                            onChange={(event) =>
-                              setDepositEditors((current) => ({
-                                ...current,
-                                [deposit.id]: { ...editor, month: event.target.value },
-                              }))
-                            }
-                          />
-                        </div>
-
-                        <div className="space-y-2">
                           <Label>Date</Label>
                           <DatePicker
                             value={editor.date}
@@ -1065,7 +1050,7 @@ export default function FundManagementPage() {
               return (
                 <div key={expense.id} className="rounded-xl bg-background p-4">
                   {editor ? (
-                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                      <div className="grid gap-3 md:grid-cols-2">
                       <div className="space-y-2">
                         <Label>Amount</Label>
                         <Input
@@ -1120,20 +1105,6 @@ export default function FundManagementPage() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label>Month</Label>
-                        <Input
-                          type="month"
-                          value={editor.month}
-                          onChange={(event) =>
-                            setExpenseEditors((current) => ({
-                              ...current,
-                              [expense.id]: { ...editor, month: event.target.value },
-                            }))
-                          }
-                        />
-                      </div>
-
-                      <div className="space-y-2">
                         <Label>Date</Label>
                         <DatePicker
                           value={editor.date}
@@ -1146,7 +1117,7 @@ export default function FundManagementPage() {
                         />
                       </div>
 
-                      <div className="space-y-2 xl:col-span-3">
+                      <div className="space-y-2 md:col-span-2">
                         <Label>Description</Label>
                         <Input
                           value={editor.description}
@@ -1159,7 +1130,7 @@ export default function FundManagementPage() {
                         />
                       </div>
 
-                      <div className="flex gap-2 xl:col-span-3">
+                      <div className="flex gap-2 md:col-span-2">
                         <Button type="button" onClick={() => handleSaveExpense(expense.id)} disabled={updateExpenseMutation.isPending}>
                           {updateExpenseMutation.isPending ? <Spinner className="size-4" /> : <Save />}
                           <span>Save</span>
@@ -1234,7 +1205,7 @@ export default function FundManagementPage() {
 
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-background px-4 py-3">
             <div>
-              <p className="font-medium text-foreground">Net position for {formatMonthLabel(selectedMonth)}</p>
+              <p className="font-medium text-foreground">Net Balacne for {formatMonthLabel(selectedMonth)}</p>
               <p className="text-sm text-muted-foreground">Deposits minus expenses for the selected month.</p>
             </div>
             <p className={cn("text-lg font-semibold", closingBalance >= 0 ? "text-emerald-600" : "text-rose-600")}>
