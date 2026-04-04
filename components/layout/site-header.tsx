@@ -49,6 +49,7 @@ export function SiteHeader() {
             <Link
               key={link.href}
               href={link.href}
+              aria-current={pathname === link.href ? "page" : undefined}
               className={cn(
                 "rounded-full border border-transparent px-4 py-2 text-sm font-medium transition",
                 pathname === link.href

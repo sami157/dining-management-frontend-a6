@@ -178,11 +178,14 @@ a {
 }
 
 a:hover {
-  border-color: currentColor;
+  background-color: var(--color-muted);
 }
 
-a.active {
-  color: var(--primary-foreground);
+a[aria-current="page"],
+a[aria-current="page"]:hover {
+  color: var(--color-primary-foreground) !important;
+  background-color: var(--color-primary) !important;
+  border-color: transparent !important;
   font-weight: 600;
 }
 

@@ -56,6 +56,7 @@ export function AdminSidebar() {
             <Link
               key={link.href}
               href={link.href}
+              aria-current={active ? "page" : undefined}
               className={cn(
                 "rounded-lg px-4 py-3 font-medium transition",
                 active
