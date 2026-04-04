@@ -5,6 +5,14 @@ import { apiRoutes } from "@/lib/api/routes";
 import type { ApiSuccessResponse } from "@/lib/api/types";
 import type { AppUser } from "@/lib/types/app-user";
 
+export async function getUsers() {
+  const response = await api.get<ApiSuccessResponse<AppUser[]>>(apiRoutes.users.root, {
+    suppressAuthToast: true,
+  });
+
+  return response.data.data;
+}
+
 export type UpdateCurrentUserProfilePayload = {
   name: string;
   mobile?: string;

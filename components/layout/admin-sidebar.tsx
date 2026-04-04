@@ -30,31 +30,7 @@ export function AdminSidebar() {
         <p className="text-sm text-muted-foreground">
           Signed in as {appUser?.name ?? "User"} ({appUser?.role ?? "Unknown"})
         </p>
-      </div>
-
-      <nav className="flex flex-1 flex-col gap-2 px-4 py-5">
-        {adminLinks.map((link) => {
-          const active =
-            pathname === link.href || pathname.startsWith(`${link.href}/`);
-
-          return (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={cn(
-                "rounded-[calc(var(--radius)+0.25rem)] px-4 py-3 text-sm font-medium transition",
-                active
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-foreground/72 hover:bg-secondary/45"
-              )}
-            >
-              {link.label}
-            </Link>
-          );
-        })}
-      </nav>
-
-      <div className="flex gap-3 px-4 py-4">
+        <div className="flex gap-8">
         <Button variant="outline" className="flex-1" onClick={() => router.push("/")}>
           Home
         </Button>
@@ -69,6 +45,29 @@ export function AdminSidebar() {
           Logout
         </Button>
       </div>
+      </div>
+
+      <nav className="flex flex-1 flex-col gap-2 px-4 py-5">
+        {adminLinks.map((link) => {
+          const active =
+            pathname === link.href;
+
+          return (
+            <Link
+              key={link.href}
+              href={link.href}
+              className={cn(
+                "rounded-lg px-4 py-3 font-medium transition",
+                active
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-foreground/72 hover:bg-secondary/45"
+              )}
+            >
+              {link.label}
+            </Link>
+          );
+        })}
+      </nav>
     </aside>
   );
 }
