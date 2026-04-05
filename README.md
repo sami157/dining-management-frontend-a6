@@ -4,6 +4,10 @@ A role-based meal and finance management frontend for a shared dining system. Th
 
 Built with Next.js App Router, React, TypeScript, TanStack Query, and a REST API backend.
 
+## Live Link
+
+https://dining-management-frontend-a6.vercel.app/
+
 ## Overview
 
 This project is the frontend for a dining management platform designed for hostels, dormitories, shared communities, or similar organizations where daily meal planning and monthly accounting need to stay organized.
