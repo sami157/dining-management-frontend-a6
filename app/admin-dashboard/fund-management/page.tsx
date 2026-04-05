@@ -222,14 +222,14 @@ function SummaryMetric({
   );
 }
 
-function MemberPicker({
+function UserPicker({
   value,
-  members,
+  users,
   onChange,
-  placeholder = "Select member",
+  placeholder = "Select User",
 }: {
   value: string;
-  members: AppUser[];
+  users: AppUser[];
   onChange: (value: string) => void;
   placeholder?: string;
 }) {
@@ -237,18 +237,18 @@ function MemberPicker({
   const [search, setSearch] = useState("");
 
   const normalizedSearch = search.trim().toLowerCase();
-  const filteredMembers = members.filter((member) => {
+  const filteredUsers = users.filter((user) => {
     if (!normalizedSearch) {
       return true;
     }
 
     return (
-      member.name.toLowerCase().includes(normalizedSearch) ||
-      member.email.toLowerCase().includes(normalizedSearch)
+      user.name.toLowerCase().includes(normalizedSearch) ||
+      user.email.toLowerCase().includes(normalizedSearch)
     );
   });
 
-  const selectedMember = members.find((member) => member.id === value) ?? null;
+  const selectedUser = users.find((user) => user.id === value) ?? null;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -260,8 +260,8 @@ function MemberPicker({
           aria-expanded={open}
           className="w-full justify-between font-normal"
         >
-          <span className={cn("truncate", !selectedMember && "text-muted-foreground")}>
-            {selectedMember ? selectedMember.name : placeholder}
+          <span className={cn("truncate", !selectedUser && "text-muted-foreground")}>
+            {selectedUser ? selectedUser.name : placeholder}
           </span>
           <ChevronsUpDown className="size-4 opacity-50" />
         </Button>
@@ -271,31 +271,33 @@ function MemberPicker({
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search member..."
+            placeholder="Search User..."
           />
         </div>
         <div className="max-h-64 overflow-y-auto p-1">
-          {filteredMembers.length ? (
-            filteredMembers.map((member) => (
+          {filteredUsers.length ? (
+            filteredUsers.map((user) => (
               <button
-                key={member.id}
+                key={user.id}
                 type="button"
                 className="focus:bg-accent focus:text-accent-foreground flex w-full items-center justify-between rounded-md px-2 py-2 text-left text-sm outline-none hover:bg-accent"
                 onClick={() => {
-                  onChange(member.id);
+                  onChange(user.id);
                   setOpen(false);
                   setSearch("");
                 }}
               >
                 <span className="min-w-0">
-                  <span className="block truncate font-medium">{member.name}</span>
-                  <span className="block truncate text-xs text-muted-foreground">{member.email}</span>
+                  <span className="block truncate font-medium">{user.name}</span>
+                  <span className="block truncate text-xs text-muted-foreground">
+                    {user.email} • {user.role}
+                  </span>
                 </span>
-                <Check className={cn("size-4 shrink-0", member.id === value ? "opacity-100" : "opacity-0")} />
+                <Check className={cn("size-4 shrink-0", user.id === value ? "opacity-100" : "opacity-0")} />
               </button>
             ))
           ) : (
-            <div className="px-2 py-4 text-center text-sm text-muted-foreground">No member found.</div>
+            <div className="px-2 py-4 text-center text-sm text-muted-foreground">No user found.</div>
           )}
         </div>
       </PopoverContent>
@@ -333,11 +335,11 @@ export default function FundManagementPage() {
 
   const finalizedMonthsQuery = useQuery({
     queryKey: ["finance", "finalized-months"],
-    queryFn: getFinalizedMonths,
+    queryFn: () => getFinalizedMonths(),
   });
 
-  const memberUsers = (usersQuery.data ?? []).filter((user) => user.role === "MEMBER" && user.isActive);
-  const selectedDepositUserId = depositForm.userId || memberUsers[0]?.id || "";
+  const allUsers = (usersQuery.data ?? []).slice().sort((left, right) => left.name.localeCompare(right.name));
+  const selectedDepositUserId = depositForm.userId || allUsers[0]?.id || "";
 
   const syncBalances = async () => {
     await Promise.all([
@@ -367,7 +369,7 @@ export default function FundManagementPage() {
     mutationFn: createDeposit,
     onSuccess: async () => {
       await Promise.all([syncFinance(), syncBalances()]);
-      setDepositForm(buildDepositFormState(memberUsers[0]?.id ?? ""));
+      setDepositForm(buildDepositFormState(allUsers[0]?.id ?? ""));
       toast.success("Deposit recorded.");
     },
     onError: (error) => {
@@ -498,20 +500,20 @@ export default function FundManagementPage() {
       .filter((expense) => expense.category === category)
       .reduce((sum, expense) => sum + toNumber(expense.amount), 0),
   }));
-  const memberSummaries = memberUsers
-    .map((member) => ({
-      member,
+  const userSummaries = allUsers
+    .map((user) => ({
+      user,
       total: selectedMonthDeposits
-        .filter((deposit) => deposit.userId === member.id)
+        .filter((deposit) => deposit.userId === user.id)
         .reduce((sum, deposit) => sum + toNumber(deposit.amount), 0),
     }))
-    .sort((left, right) => right.total - left.total || left.member.name.localeCompare(right.member.name));
+    .sort((left, right) => right.total - left.total || left.user.name.localeCompare(right.user.name));
 
   const handleCreateDeposit = async () => {
     const amount = Number(depositForm.amount);
 
     if (!selectedDepositUserId) {
-      toast.error("Select a member first.");
+      toast.error("Select a user first.");
       return;
     }
 
@@ -616,7 +618,7 @@ export default function FundManagementPage() {
   };
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto">
+    <div className="space-y-8 max-w-7xl mx-auto">
       <PageIntro
         eyebrow="Admin"
         title="Fund Management"
@@ -660,7 +662,7 @@ export default function FundManagementPage() {
                   <Lock className="size-4 text-emerald-600" />
                   <span>
                     {formatMonthLabel(selectedMonth)} is finalized.
-                    {selectedMonthFinalization.finalizedAt
+                    {selectedMonthFinalization?.finalizedAt
                       ? ` Locked on ${formatDate(selectedMonthFinalization.finalizedAt)}.`
                       : ""}
                   </span>
@@ -695,7 +697,7 @@ export default function FundManagementPage() {
               />
               <SummaryMetric
                 label="Depositors"
-                value={String(memberSummaries.filter((item) => item.total > 0).length)}
+                value={String(userSummaries.filter((item) => item.total > 0).length)}
               />
             </div>
 
@@ -758,10 +760,10 @@ export default function FundManagementPage() {
                   <div>
                     <p className="font-semibold text-lg text-foreground">Operational stats</p>
                     <p className="text-sm text-muted-foreground">
-                      Backend monthly analytics from `/stats/monthly`.
+                      These stats are based on the meal registrations and finalization of the selected month, giving you insights into member participation and meal availability.
                     </p>
                   </div>
-                  <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[28rem]">
+                  <div className="grid gap-3 sm:grid-cols-2 lg:min-w-md">
                     <div className="rounded-xl bg-muted px-4 py-3">
                       <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Registration rows</p>
                       <p className="mt-2 text-lg font-semibold text-foreground">
@@ -780,14 +782,14 @@ export default function FundManagementPage() {
                         {monthlyStats.meals.availableMealCount}
                       </p>
                     </div>
-                    <div className="rounded-xl bg-muted px-4 py-3">
-                      <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Meal rate</p>
-                      <p className="mt-2 text-lg font-semibold text-foreground">
-                        {monthlyStats.finalization.mealRate != null
-                          ? formatMoney(monthlyStats.finalization.mealRate)
-                          : "Not finalized"}
-                      </p>
-                    </div>
+                    {monthlyStats.finalization.isFinalized ? (
+                      <div className="rounded-xl bg-muted px-4 py-3">
+                        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Meal rate</p>
+                        <p className="mt-2 text-lg font-semibold text-foreground">
+                          {formatMoney(monthlyStats.finalization.mealRate)}
+                        </p>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -850,9 +852,9 @@ export default function FundManagementPage() {
           <CardContent className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label>Member</Label>
-              <MemberPicker
+              <UserPicker
                 value={selectedDepositUserId}
-                members={memberUsers}
+                users={allUsers}
                 onChange={(value) => setDepositForm((current) => ({ ...current, userId: value }))}
               />
             </div>
@@ -895,7 +897,7 @@ export default function FundManagementPage() {
                 onClick={handleCreateDeposit}
                 disabled={
                   createDepositMutation.isPending ||
-                  !memberUsers.length ||
+                  !allUsers.length ||
                   isMonthLocked(finalizedMonths.find((item) => item.month === getMonthFromDate(depositForm.date)) ?? null)
                 }
               >
@@ -1015,9 +1017,9 @@ export default function FundManagementPage() {
                       <div className="grid gap-3 md:grid-cols-2">
                         <div className="space-y-2">
                           <Label>Member</Label>
-                          <MemberPicker
+                          <UserPicker
                             value={editor.userId}
-                            members={memberUsers}
+                            users={allUsers}
                             onChange={(value) =>
                               setDepositEditors((current) => ({
                                 ...current,
@@ -1153,27 +1155,27 @@ export default function FundManagementPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Member Contribution Totals</CardTitle>
-            <CardDescription>Quick month-level contribution view for active members.</CardDescription>
+            <CardTitle>User Contribution Totals</CardTitle>
+            <CardDescription>Quick month-level contribution view across all users.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {memberSummaries.length ? (
-              memberSummaries.map(({ member, total }: { member: AppUser; total: number }) => (
-                <div key={member.id} className="rounded-xl bg-background px-4 py-3">
+            {userSummaries.length ? (
+              userSummaries.map(({ user, total }: { user: AppUser; total: number }) => (
+                <div key={user.id} className="rounded-xl bg-background px-4 py-3">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="font-medium text-foreground">{member.name}</p>
-                      <p className="text-sm text-muted-foreground">{member.email}</p>
+                      <p className="font-medium text-foreground">{user.name}</p>
+                      <p className="text-sm text-muted-foreground">{user.email}</p>
                     </div>
                     <div className="text-right">
                       <p className="font-semibold text-foreground">{formatMoney(total)}</p>
-                      <p className="text-xs text-muted-foreground">Balance {formatMoney(member.balance)}</p>
+                      <p className="text-xs text-muted-foreground">Balance {formatMoney(user.balance)}</p>
                     </div>
                   </div>
                 </div>
               ))
             ) : (
-              <SectionEmptyState label="No active members are available for contribution tracking." />
+              <SectionEmptyState label="No users are available for contribution tracking." />
             )}
           </CardContent>
         </Card>

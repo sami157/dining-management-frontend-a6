@@ -53,11 +53,11 @@ const ConfigurationPage = () => {
 
   const deadlinesQuery = useQuery({
     queryKey: queryKeys.mealDeadlines,
-    queryFn: getMealDeadlines,
+    queryFn: () => getMealDeadlines(),
   });
   const templatesQuery = useQuery({
     queryKey: ["weekly-meal-templates"],
-    queryFn: getWeeklyMealTemplates,
+    queryFn: () => getWeeklyMealTemplates(),
   });
 
   const saveDeadlineMutation = useMutation({

@@ -19,6 +19,14 @@ export type UpdateCurrentUserProfilePayload = {
   profileImage?: string;
 };
 
+export type UpdateUserByIdPayload = {
+  name?: string;
+  email?: string;
+  mobile?: string;
+  profileImage?: string;
+  isActive?: boolean;
+};
+
 export async function updateCurrentUserProfile(
   payload: UpdateCurrentUserProfilePayload
 ) {
@@ -37,6 +45,22 @@ export async function updateUserRole(id: string, role: UserRole) {
       suppressAuthToast: true,
     }
   );
+
+  return response.data.data;
+}
+
+export async function updateUserById(id: string, payload: UpdateUserByIdPayload) {
+  const response = await api.patch<ApiSuccessResponse<AppUser>>(apiRoutes.users.byId(id), payload, {
+    suppressAuthToast: true,
+  });
+
+  return response.data.data;
+}
+
+export async function deactivateUser(id: string) {
+  const response = await api.delete<ApiSuccessResponse<AppUser>>(apiRoutes.users.byId(id), {
+    suppressAuthToast: true,
+  });
 
   return response.data.data;
 }

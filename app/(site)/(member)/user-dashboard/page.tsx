@@ -168,9 +168,9 @@ const UserDashboardPage = () => {
   });
 
   const registrationsQuery = useQuery({
-    queryKey: queryKeys.myRegistrations,
-    queryFn: () => getRegistrations(),
-    enabled: Boolean(user),
+    queryKey: [...queryKeys.myRegistrations, appUser?.id ?? "anonymous"],
+    queryFn: () => getRegistrations(appUser?.id),
+    enabled: Boolean(user && appUser?.id),
   });
 
   const registerMutation = useMutation({
@@ -222,7 +222,7 @@ const UserDashboardPage = () => {
   });
 
   if (upcomingSchedulesQuery.isPending || registrationsQuery.isPending) {
-    return <LoadingState label="Loading your upcoming meals..." />;
+    return <LoadingState label="Loading your dashboard..." />;
   }
 
   if (upcomingSchedulesQuery.isError || registrationsQuery.isError) {
@@ -332,7 +332,7 @@ const UserDashboardPage = () => {
             <CardContent className="grid gap-4 sm:grid-cols-2 md:grid-cols-1">
               <div className="rounded-lg bg-muted p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-                  Bookings
+                  My Bookings
                 </p>
                 <p className="mt-3 text-3xl font-semibold text-foreground">
                   {totalMonthBookings}

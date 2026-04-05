@@ -13,6 +13,7 @@ export const apiRoutes = {
     root: "/users",
     me: "/users/me",
     role: (id: string) => `/users/${id}/role`,
+    byId: (id: string) => `/users/${id}`,
   },
   templates: {
     root: "/templates",

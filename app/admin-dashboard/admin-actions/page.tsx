@@ -1,7 +1,7 @@
 'use client'
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, ChevronsUpDown, RotateCcw, Save, ShieldCheck } from "lucide-react";
+import { Check, ChevronsUpDown, RotateCcw, Save, ShieldCheck, UserX } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { RoleProtectedRoute } from "@/components/auth/protected-route";
@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { rollbackFinalizedMonth, getFinalizedMonths } from "@/lib/api/finance";
-import { getUsers, updateUserRole } from "@/lib/api/users";
+import { deactivateUser, getUsers, updateUserById, updateUserRole } from "@/lib/api/users";
 import { queryKeys } from "@/lib/query/keys";
 import type { AppUser, UserRole } from "@/lib/types/app-user";
 import type { FinalizedMonth } from "@/lib/types/finance";
@@ -160,17 +160,17 @@ function UserPicker({
 
 function AdminActionsPageContent() {
   const queryClient = useQueryClient();
-  const { refreshAppUser } = useAuth();
+  const { appUser, refreshAppUser } = useAuth();
   const [selectedRoleUserId, setSelectedRoleUserId] = useState("");
   const [roleDraft, setRoleDraft] = useState<UserRole>("MEMBER");
 
   const usersQuery = useQuery({
     queryKey: ["admin-users"],
-    queryFn: getUsers,
+    queryFn: () => getUsers(),
   });
   const finalizedMonthsQuery = useQuery({
     queryKey: ["finance", "finalized-months"],
-    queryFn: getFinalizedMonths,
+    queryFn: () => getFinalizedMonths(),
   });
 
   const users = (usersQuery.data ?? [])
@@ -215,6 +215,32 @@ function AdminActionsPageContent() {
     },
   });
 
+  const deactivateUserMutation = useMutation({
+    mutationFn: deactivateUser,
+    onSuccess: async (updatedUser) => {
+      await refreshAdminState();
+      setSelectedRoleUserId(updatedUser.id);
+      setRoleDraft(updatedUser.role);
+      toast.success(`${updatedUser.name} has been deactivated.`);
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Failed to deactivate user.");
+    },
+  });
+
+  const reactivateUserMutation = useMutation({
+    mutationFn: (userId: string) => updateUserById(userId, { isActive: true }),
+    onSuccess: async (updatedUser) => {
+      await refreshAdminState();
+      setSelectedRoleUserId(updatedUser.id);
+      setRoleDraft(updatedUser.role);
+      toast.success(`${updatedUser.name} has been reactivated.`);
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Failed to reactivate user.");
+    },
+  });
+
   const rollbackMonthMutation = useMutation({
     mutationFn: rollbackFinalizedMonth,
     onSuccess: async () => {
@@ -247,6 +273,11 @@ function AdminActionsPageContent() {
       return;
     }
 
+    if (selectedRoleUser.id === appUser?.id) {
+      toast.error("You cannot change your own role.");
+      return;
+    }
+
     if (selectedRoleUser.role === roleDraft) {
       toast.error("Choose a different role before saving.");
       return;
@@ -256,6 +287,39 @@ function AdminActionsPageContent() {
       userId: selectedRoleUser.id,
       role: roleDraft,
     });
+  };
+
+  const handleDeactivateUser = async () => {
+    if (!selectedRoleUser) {
+      toast.error("Select a user first.");
+      return;
+    }
+
+    if (selectedRoleUser.id === appUser?.id) {
+      toast.error("You cannot deactivate your own account.");
+      return;
+    }
+
+    if (!selectedRoleUser.isActive) {
+      toast.error("That user is already inactive.");
+      return;
+    }
+
+    await deactivateUserMutation.mutateAsync(selectedRoleUser.id);
+  };
+
+  const handleReactivateUser = async () => {
+    if (!selectedRoleUser) {
+      toast.error("Select a user first.");
+      return;
+    }
+
+    if (selectedRoleUser.isActive) {
+      toast.error("That user is already active.");
+      return;
+    }
+
+    await reactivateUserMutation.mutateAsync(selectedRoleUser.id);
   };
 
   return (
@@ -311,15 +375,42 @@ function AdminActionsPageContent() {
             </Select>
           </div>
 
-          <div className="flex items-end">
+          <div className="flex flex-wrap items-end gap-2">
             <Button
               type="button"
               onClick={handleRoleSave}
-              disabled={!selectedRoleUser || updateUserRoleMutation.isPending || selectedRoleUser.role === roleDraft}
+              disabled={
+                !selectedRoleUser ||
+                selectedRoleUser.id === appUser?.id ||
+                updateUserRoleMutation.isPending ||
+                selectedRoleUser.role === roleDraft
+              }
             >
               {updateUserRoleMutation.isPending ? <Spinner className="size-4" /> : <Save />}
               <span>Save role</span>
             </Button>
+            {selectedRoleUser?.isActive && selectedRoleUser.id !== appUser?.id ? (
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={handleDeactivateUser}
+                disabled={deactivateUserMutation.isPending}
+              >
+                {deactivateUserMutation.isPending ? <Spinner className="size-4" /> : <UserX className="size-4" />}
+                <span>Deactivate User</span>
+              </Button>
+            ) : null}
+            {selectedRoleUser && !selectedRoleUser.isActive ? (
+              <Button
+                type="button"
+                onClick={handleReactivateUser}
+                className="bg-emerald-500/12 text-emerald-800 hover:bg-emerald-500/18 dark:text-emerald-300"
+                disabled={reactivateUserMutation.isPending}
+              >
+                {reactivateUserMutation.isPending ? <Spinner className="size-4" /> : <Check className="size-4" />}
+                <span>Reactivate User</span>
+              </Button>
+            ) : null}
           </div>
 
           {selectedRoleUser ? (
@@ -328,6 +419,10 @@ function AdminActionsPageContent() {
               <span> currently has the </span>
               <span className="font-medium text-foreground">{roleLabels[selectedRoleUser.role]}</span>
               <span> role.</span>
+              <span> Status: </span>
+              <span className="font-medium text-foreground">{selectedRoleUser.isActive ? "Active" : "Inactive"}</span>
+              {selectedRoleUser.id === appUser?.id ? <span> You cannot change your own role.</span> : null}
+              {selectedRoleUser.id === appUser?.id ? <span> You cannot deactivate your own account.</span> : null}
             </div>
           ) : null}
         </CardContent>

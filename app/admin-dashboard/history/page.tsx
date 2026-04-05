@@ -145,7 +145,7 @@ export default function HistoryPage() {
 
   const finalizedMonthsQuery = useQuery({
     queryKey: ["finance", "finalized-months"],
-    queryFn: getFinalizedMonths,
+    queryFn: () => getFinalizedMonths(),
   });
   const latestKnownFinalizedMonth = (finalizedMonthsQuery.data ?? [])
     .slice()
@@ -154,7 +154,7 @@ export default function HistoryPage() {
 
   const depositsQuery = useQuery({
     queryKey: ["history", "deposits"],
-    queryFn: getDeposits,
+    queryFn: () => getDeposits(),
   });
 
   const expensesQuery = useQuery({
@@ -165,7 +165,7 @@ export default function HistoryPage() {
 
   const usersQuery = useQuery({
     queryKey: ["history", "users"],
-    queryFn: getUsers,
+    queryFn: () => getUsers(),
   });
 
   const registrationsQuery = useQuery({

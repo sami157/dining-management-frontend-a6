@@ -1,5 +1,6 @@
 'use client'
 
+import { Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -23,7 +24,7 @@ type RegisterFormValues = {
   password: string;
 };
 
-export default function RegisterPage() {
+function RegisterPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { createUser } = useAuth();
@@ -46,7 +47,7 @@ export default function RegisterPage() {
   async function onSubmit(values: RegisterFormValues) {
     try {
       await createUser(values);
-      toast.success("Account created and synced with backend.");
+      toast.success("Account created successfully.");
       router.replace("/");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Registration failed.");
@@ -59,7 +60,7 @@ export default function RegisterPage() {
         <CardHeader>
           <CardTitle>Create Account</CardTitle>
           <CardDescription>
-            This registers the Firebase user first, then syncs the app user profile to the backend.
+            Sign up with your details to get started. After registering, you can use the same credentials to log in.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -135,5 +136,35 @@ export default function RegisterPage() {
         </CardContent>
       </Card>
     </main>
+  );
+}
+
+function RegisterPageFallback() {
+  return (
+    <main className="bg-shell flex flex-1 items-center justify-center px-6 py-16">
+      <Card className="w-full max-w-lg border-white/60 bg-muted">
+        <CardHeader>
+          <CardTitle>Create Account</CardTitle>
+          <CardDescription>
+            Sign up with your details to get started. After registering, you can use the same credentials to log in.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="h-10 rounded-md bg-background/70" />
+          <div className="h-10 rounded-md bg-background/70" />
+          <div className="h-10 rounded-md bg-background/70" />
+          <div className="h-10 rounded-md bg-background/70" />
+          <div className="h-10 rounded-full bg-primary/15" />
+        </CardContent>
+      </Card>
+    </main>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<RegisterPageFallback />}>
+      <RegisterPageContent />
+    </Suspense>
   );
 }

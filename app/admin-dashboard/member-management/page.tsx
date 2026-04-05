@@ -161,14 +161,14 @@ const getInitials = (name: string) =>
     .map((part) => part[0]?.toUpperCase() ?? "")
     .join("") || "NA";
 
-function MemberPicker({
+function UserPicker({
   value,
-  members,
+  users,
   onChange,
-  placeholder = "Select member",
+  placeholder = "Select User",
 }: {
   value: string;
-  members: AppUser[];
+  users: AppUser[];
   onChange: (value: string) => void;
   placeholder?: string;
 }) {
@@ -176,19 +176,19 @@ function MemberPicker({
   const [search, setSearch] = useState("");
 
   const normalizedSearch = search.trim().toLowerCase();
-  const filteredMembers = members.filter((member) => {
+  const filteredUsers = users.filter((user) => {
     if (!normalizedSearch) {
       return true;
     }
 
     return (
-      member.name.toLowerCase().includes(normalizedSearch) ||
-      member.email.toLowerCase().includes(normalizedSearch) ||
-      (member.mobile ?? "").toLowerCase().includes(normalizedSearch)
+      user.name.toLowerCase().includes(normalizedSearch) ||
+      user.email.toLowerCase().includes(normalizedSearch) ||
+      (user.mobile ?? "").toLowerCase().includes(normalizedSearch)
     );
   });
 
-  const selectedMember = members.find((member) => member.id === value) ?? null;
+  const selectedUser = users.find((user) => user.id === value) ?? null;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -200,8 +200,8 @@ function MemberPicker({
           aria-expanded={open}
           className="w-full justify-between font-normal"
         >
-          <span className={cn("truncate", !selectedMember && "text-muted-foreground")}>
-            {selectedMember ? `${selectedMember.name}` : placeholder}
+          <span className={cn("truncate", !selectedUser && "text-muted-foreground")}>
+            {selectedUser ? `${selectedUser.name}` : placeholder}
           </span>
           <ChevronsUpDown className="size-4 opacity-50" />
         </Button>
@@ -211,30 +211,33 @@ function MemberPicker({
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search member..."
+            placeholder="Search User..."
           />
         </div>
         <div className="max-h-64 overflow-y-auto p-1">
-          {filteredMembers.length ? (
-            filteredMembers.map((member) => (
+          {filteredUsers.length ? (
+            filteredUsers.map((user) => (
               <button
-                key={member.id}
+                key={user.id}
                 type="button"
                 className="focus:bg-accent focus:text-accent-foreground flex w-full items-center justify-between rounded-md px-2 py-2 text-left text-sm outline-none hover:bg-accent"
                 onClick={() => {
-                  onChange(member.id);
+                  onChange(user.id);
                   setOpen(false);
                   setSearch("");
                 }}
               >
                 <span className="min-w-0">
-                  <span className="block truncate font-medium">{member.name}</span>
+                  <span className="block truncate font-medium">{user.name}</span>
+                  <span className="block truncate text-xs text-muted-foreground">
+                    {user.email} • {user.role}
+                  </span>
                 </span>
-                <Check className={cn("size-4 shrink-0", member.id === value ? "opacity-100" : "opacity-0")} />
+                <Check className={cn("size-4 shrink-0", user.id === value ? "opacity-100" : "opacity-0")} />
               </button>
             ))
           ) : (
-            <div className="px-2 py-4 text-center text-sm text-muted-foreground">No member found.</div>
+            <div className="px-2 py-4 text-center text-sm text-muted-foreground">No user found.</div>
           )}
         </div>
       </PopoverContent>
@@ -259,14 +262,14 @@ export default function MemberManagementPage() {
     queryFn: () => getSchedules({ month: selectedMonth }),
   });
 
-  const members = (usersQuery.data ?? [])
-    .filter((user) => user.role === "MEMBER")
+  const users = (usersQuery.data ?? [])
+    .slice()
     .sort((left, right) => left.name.localeCompare(right.name));
 
-  const effectiveSelectedMemberId = members.some((member) => member.id === selectedMemberId)
+  const effectiveSelectedMemberId = users.some((member) => member.id === selectedMemberId)
     ? selectedMemberId
-    : (members[0]?.id ?? "");
-  const selectedMember = members.find((member) => member.id === effectiveSelectedMemberId) ?? null;
+    : (users[0]?.id ?? "");
+  const selectedMember = users.find((member) => member.id === effectiveSelectedMemberId) ?? null;
 
   const registrationsQuery = useQuery({
     queryKey: ["member-registrations", effectiveSelectedMemberId],
@@ -402,7 +405,7 @@ export default function MemberManagementPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-8">
       <PageIntro
-        eyebrow="Admin"
+        eyebrow="Manager"
         title="Meal Overrides"
         description="Managers can select a member, browse scheduled dates, and directly add, update, or remove that member's meal registrations."
       />
@@ -413,35 +416,31 @@ export default function MemberManagementPage() {
             <CardHeader>
               <div>
                 <CardTitle>Select Member</CardTitle>
-                <CardDescription>Choose the member whose registrations you want to override.</CardDescription>
+                <CardDescription>Choose user and a scheduled day before registering or editing meal count.</CardDescription>
               </div>
             </CardHeader>
             <CardContent>
-              {members.length ? (
+              {users.length ? (
                 <>
-                  <MemberPicker
+                  <UserPicker
                     value={effectiveSelectedMemberId}
-                    members={members}
+                    users={users}
                     onChange={setSelectedMemberId}
-                    placeholder="Search and select member"
+                    placeholder="Search And Select User"
                   />
                 </>
               ) : (
                 <div className="rounded-2xl border border-dashed border-border bg-background px-4 py-10 text-center text-sm text-muted-foreground">
-                  No members are available to manage.
+                  No users are available to manage.
                 </div>
               )}
             </CardContent>
           </Card>
 
           <Card className="bg-card">
-            <CardHeader>
-              <CardTitle>Select Date</CardTitle>
-              <CardDescription>Choose a month and a scheduled day before editing that member&apos;s meal count.</CardDescription>
-            </CardHeader>
             <CardContent className="space-y-4">
               <Calendar
-                className="w-full max-w-120 mx-auto rounded-2xl bg-background p-4"
+                className="w-full max-w-[60vw] mx-auto rounded-2xl bg-background p-4"
                 mode="single"
                 month={monthKeyToDate(selectedMonth)}
                 captionLayout="dropdown"

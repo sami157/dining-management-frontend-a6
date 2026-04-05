@@ -58,11 +58,6 @@ const processSteps = [
   },
 ];
 
-const benefits = [
-  "Weighted meal totals are tracked for operational accuracy.",
-  "Monthly finalization and rollback state stays visible to the whole community.",
-  "Deposits and balances update live instead of waiting for month closeout.",
-];
 
 const monthFormatter = new Intl.DateTimeFormat("en-US", {
   month: "long",
@@ -196,7 +191,7 @@ export default function HomePage() {
             <h2 className="title-font text-3xl text-foreground">Live Monthly Snapshot</h2>
           </div>
           {publicStats ? (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+            <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-4">
               <PublicMetric
                 icon={Users}
                 label="Active members"

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Compass, LogIn } from "lucide-react";
@@ -24,7 +24,7 @@ type LoginFormValues = {
   password: string;
 };
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { signIn, signInWithGoogle, refreshAppUser } = useAuth();
@@ -78,7 +78,7 @@ export default function LoginPage() {
         <CardHeader>
           <CardTitle>Login</CardTitle>
           <CardDescription>
-            Sign in with Firebase, then hydrate the matching app user from the backend.
+            Sign in with your email and password or continue with Google.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -141,5 +141,34 @@ export default function LoginPage() {
         </CardContent>
       </Card>
     </main>
+  );
+}
+
+function LoginPageFallback() {
+  return (
+    <main className="bg-shell flex flex-1 items-center justify-center px-6 py-16">
+      <Card className="w-full max-w-md border-white/60 bg-muted">
+        <CardHeader>
+          <CardTitle>Login</CardTitle>
+          <CardDescription>
+            Sign in with your email and password or continue with Google.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="h-10 rounded-md bg-background/70" />
+          <div className="h-10 rounded-md bg-background/70" />
+          <div className="h-10 rounded-full bg-primary/15" />
+          <div className="h-10 rounded-full bg-secondary/80" />
+        </CardContent>
+      </Card>
+    </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginPageFallback />}>
+      <LoginPageContent />
+    </Suspense>
   );
 }

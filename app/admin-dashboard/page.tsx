@@ -5,7 +5,12 @@ import { CalendarClock, ShieldCheck, SunMedium, UserCheck, Users, UtensilsCrosse
 import { PageIntro } from "@/components/layout/page-intro";
 import { LoadingState } from "@/components/shared/loading-state";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getRegistrations } from "@/lib/api/registrations";
+import { getSchedules } from "@/lib/api/schedules";
 import { getDailyStats, getManagerStats, getOverviewStats } from "@/lib/api/stats";
+import { getUsers } from "@/lib/api/users";
+import type { AppUser } from "@/lib/types/app-user";
+import type { MealRegistration } from "@/lib/types/meal";
 import type { DailyMealTypeStats, ManagerSummary } from "@/lib/types/stats";
 import { cn } from "@/lib/utils";
 
@@ -78,23 +83,77 @@ export default function AdminDashboardPage() {
   });
   const managersQuery = useQuery({
     queryKey: ["stats", "managers"],
-    queryFn: getManagerStats,
+    queryFn: () => getManagerStats(),
+  });
+  const usersQuery = useQuery({
+    queryKey: ["admin-users"],
+    queryFn: () => getUsers(),
+  });
+  const registrationsQuery = useQuery({
+    queryKey: ["overview", "registrations"],
+    queryFn: () => getRegistrations(),
+  });
+  const schedulesQuery = useQuery({
+    queryKey: ["overview", "schedules", overviewQuery.data?.currentMonth ?? today.slice(0, 7)],
+    queryFn: () => getSchedules({ month: overviewQuery.data?.currentMonth ?? today.slice(0, 7) }),
+    enabled: Boolean(overviewQuery.data?.currentMonth ?? today.slice(0, 7)),
   });
   const dailyStatsQuery = useQuery({
     queryKey: ["stats", "daily", today],
     queryFn: () => getDailyStats(today),
   });
 
-  if (overviewQuery.isPending || managersQuery.isPending || dailyStatsQuery.isPending) {
+  if (
+    overviewQuery.isPending ||
+    managersQuery.isPending ||
+    usersQuery.isPending ||
+    registrationsQuery.isPending ||
+    schedulesQuery.isPending ||
+    dailyStatsQuery.isPending
+  ) {
     return <LoadingState label="Loading dashboard overview..." />;
   }
 
-  if (overviewQuery.isError || managersQuery.isError || dailyStatsQuery.isError) {
+  if (
+    overviewQuery.isError ||
+    managersQuery.isError ||
+    usersQuery.isError ||
+    registrationsQuery.isError ||
+    schedulesQuery.isError ||
+    dailyStatsQuery.isError
+  ) {
     return <LoadingState label="We couldn't load the dashboard stats." />;
   }
 
   const overview = overviewQuery.data;
   const dailyStats = dailyStatsQuery.data;
+  const users = usersQuery.data ?? [];
+  const monthSchedules = schedulesQuery.data ?? [];
+  const monthScheduledMealIds = new Set(
+    monthSchedules.flatMap((schedule) => schedule.meals.map((meal) => meal.id))
+  );
+  const monthRegistrations = (registrationsQuery.data ?? []).filter((registration) =>
+    monthScheduledMealIds.has(registration.scheduledMealId)
+  );
+  const registrationSummaryByUser = users
+    .map((user) => {
+      const userRegistrations = monthRegistrations.filter(
+        (registration: MealRegistration) => registration.userId === user.id
+      );
+
+      return {
+        user,
+        registrationCount: userRegistrations.length,
+        totalMeals: userRegistrations.reduce((sum, registration) => sum + registration.count, 0),
+      };
+    })
+    .filter((entry) => entry.registrationCount > 0)
+    .sort(
+      (left, right) =>
+        right.totalMeals - left.totalMeals ||
+        right.registrationCount - left.registrationCount ||
+        left.user.name.localeCompare(right.user.name)
+    );
   const managers = (managersQuery.data ?? [])
     .slice()
     .sort((left, right) => Number(right.isActive) - Number(left.isActive) || left.name.localeCompare(right.name));
@@ -274,6 +333,40 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="bg-card">
+        <CardHeader>
+          <CardTitle>User Registration List</CardTitle>
+          <CardDescription>
+            Registration totals for {overview.currentMonth}. Each entry shows that user&apos;s registration rows and total meals for the month.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {registrationSummaryByUser.length ? (
+            registrationSummaryByUser.map(({ user, registrationCount, totalMeals }: {
+              user: AppUser;
+              registrationCount: number;
+              totalMeals: number;
+            }) => (
+              <div key={user.id} className="rounded-xl bg-background px-4 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-foreground">{user.name}</p>
+                    <p className="text-sm text-muted-foreground">{user.email}</p>
+                    <p className="text-sm text-muted-foreground">{user.role}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-foreground">{totalMeals} Meals</p>
+                    <p className="text-sm text-muted-foreground">{registrationCount} Registrations</p>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <SectionEmptyState label={`No user registrations were recorded for ${overview.currentMonth}.`} />
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

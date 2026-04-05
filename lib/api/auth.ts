@@ -5,7 +5,7 @@ import type { User } from "firebase/auth";
 import { api } from "@/lib/api/client";
 import { apiRoutes } from "@/lib/api/routes";
 import { getAuthHeader } from "@/lib/auth/get-auth-header";
-import type { ApiSuccessResponse } from "@/lib/api/types";
+import type { ApiErrorResponse, ApiSuccessResponse } from "@/lib/api/types";
 import type { AppUser } from "@/lib/types/app-user";
 
 export type RegisterAppUserPayload = {
@@ -43,6 +43,35 @@ export async function getCurrentAppUser(firebaseUser?: User | null) {
   return response.data.data;
 }
 
+function extractApiErrorMessage(error: unknown) {
+  if (!isAxiosError<ApiErrorResponse>(error)) {
+    return "";
+  }
+
+  return (
+    error.response?.data?.errorSources?.[0]?.message ??
+    error.response?.data?.message ??
+    error.message ??
+    ""
+  ).toLowerCase();
+}
+
 export function isNotFoundError(error: unknown) {
-  return isAxiosError(error) && error.response?.status === 404;
+  if (!isAxiosError<ApiErrorResponse>(error)) {
+    return false;
+  }
+
+  if (error.response?.status === 404) {
+    return true;
+  }
+
+  const message = extractApiErrorMessage(error);
+
+  return (
+    message.includes("user does not exist") ||
+    message.includes("does not exist in the database") ||
+    message.includes("user is not registered in the system") ||
+    message.includes("not registered in the system") ||
+    message.includes("not found")
+  );
 }
