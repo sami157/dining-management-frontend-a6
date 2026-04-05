@@ -5,7 +5,12 @@ import { useRouter } from "next/navigation";
 import {
   ArrowRight,
   CalendarClock,
+  CheckCircle2,
+  Clock3,
+  HandCoins,
   ShieldCheck,
+  Sparkles,
+  Trophy,
   UtensilsCrossed,
   Users,
   Wallet,
@@ -20,19 +25,43 @@ import { cn } from "@/lib/utils";
 const features = [
   {
     title: "Meal Operations",
-    description: "Manage schedules, deadlines, and registrations around Dhaka business dates.",
+    description: "Manage schedules, deadlines, registrations, finances",
     icon: UtensilsCrossed,
   },
   {
     title: "Role-Based Access",
-    description: "Keep member, manager, and admin flows separate without duplicating page shells.",
+    description: "Seperate access for Members, Managers and Admins with clear permissions",
     icon: ShieldCheck,
   },
   {
     title: "Finance Tracking",
-    description: "Prepare deposits, expenses, and finalization views behind the new route structure.",
+    description: "Follow contributions, expenses, and month closeout in one place.",
     icon: Wallet,
   },
+];
+
+const processSteps = [
+  {
+    title: "Register meals",
+    description: "Members choose breakfast, lunch, and dinner meals before the deadline.",
+    icon: UtensilsCrossed,
+  },
+  {
+    title: "Run operations",
+    description: "Managers oversee schedules, registrations, deposits, and monthly operations.",
+    icon: Clock3,
+  },
+  {
+    title: "Close the month",
+    description: "Finalization locks the month and computes the operational meal rate from weighted usage.",
+    icon: CheckCircle2,
+  },
+];
+
+const benefits = [
+  "Weighted meal totals are tracked for operational accuracy.",
+  "Monthly finalization and rollback state stays visible to the whole community.",
+  "Deposits and balances update live instead of waiting for month closeout.",
 ];
 
 const monthFormatter = new Intl.DateTimeFormat("en-US", {
@@ -46,6 +75,10 @@ const shortDateFormatter = new Intl.DateTimeFormat("en-US", {
   day: "numeric",
   year: "numeric",
   timeZone: "Asia/Dhaka",
+});
+
+const amountFormatter = new Intl.NumberFormat("en-BD", {
+  maximumFractionDigits: 2,
 });
 
 const formatMonthLabel = (value: string) => {
@@ -74,6 +107,8 @@ const formatDate = (value: string | null | undefined) => {
   return shortDateFormatter.format(parsed);
 };
 
+const formatAmount = (value: number) => amountFormatter.format(value);
+
 function PublicMetric({
   icon: Icon,
   label,
@@ -86,7 +121,7 @@ function PublicMetric({
   detail: string;
 }) {
   return (
-    <div className="rounded-xl bg-background px-4 py-4">
+    <div className="rounded-2xl bg-background px-4 py-4">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">{label}</p>
@@ -116,19 +151,19 @@ export default function HomePage() {
   return (
     <main className="bg-shell flex-1">
       <section className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-16">
-        <div className="grid gap-10 lg:grid-cols-[1.25fr_0.85fr] lg:items-center">
+        <section className="grid gap-10 lg:grid-cols-[1.25fr_0.85fr] lg:items-center">
           <div className="space-y-6">
             <div className="space-y-3">
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
                 Dining Management
               </p>
               <h1 className="title-font max-w-3xl text-5xl tracking-tight text-foreground">
-                Community dining stats and operations now stay in one place.
+                Web-based Solution for Managing Community Dinings that Just...Works
               </h1>
               <p className="max-w-2xl text-base leading-8 text-muted-foreground">
-                Public homepage stats now reflect this month&apos;s live meal activity, while
-                protected dashboards expose deeper operational and finance analytics for managers
-                and admins.
+                Streamline your dining operations with a system designed for the full meal cycle,
+                from scheduling and registrations to financial tracking and monthly closeout. Say
+                goodbye to manual spreadsheets and hello to operational clarity for everyone.
               </p>
             </div>
 
@@ -151,99 +186,142 @@ export default function HomePage() {
               )}
             </div>
           </div>
+        </section>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xl">This month at a glance</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 text-sm text-muted-foreground">
-              {publicStatsQuery.isPending ? (
-                <p>Loading public stats...</p>
-              ) : publicStats ? (
-                <>
-                  <p>{formatMonthLabel(publicStats.month)} community overview.</p>
-                  <p>
-                    {publicStats.finalization.isFinalized
+        <section className="space-y-5">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+              Stats
+            </p>
+            <h2 className="title-font text-3xl text-foreground">Live Monthly Snapshot</h2>
+          </div>
+          {publicStats ? (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+              <PublicMetric
+                icon={Users}
+                label="Active members"
+                value={String(publicStats.community.activeMembers)}
+                detail={`${publicStats.community.activeManagers} active managers`}
+              />
+              <PublicMetric
+                icon={HandCoins}
+                label="Monthly deposits"
+                value={formatAmount(publicStats.finance.totalDeposits)}
+                detail={`Tracked for ${formatMonthLabel(publicStats.month)}`}
+              />
+              <PublicMetric
+                icon={Wallet}
+                label="Monthly expenses"
+                value={formatAmount(publicStats.finance.totalExpenses)}
+                detail="Operational spending for the selected month"
+              />
+              <PublicMetric
+                icon={UtensilsCrossed}
+                label="Meals registered"
+                value={String(publicStats.meals.totalMealsRegistered)}
+                detail='Includes registrations across all registered accounts'
+              />
+              <PublicMetric
+                icon={Wallet}
+                label="Weighted meals"
+                value={String(publicStats.meals.totalWeightedMeals)}
+                detail={`${publicStats.meals.scheduleCount} scheduled day${publicStats.meals.scheduleCount === 1 ? "" : "s"}`}
+              />
+              <PublicMetric
+                icon={Trophy}
+                label="Top depositor"
+                value={publicStats.highlights.topDepositor?.name ?? "No data"}
+                detail={
+                  publicStats.highlights.topDepositor
+                    ? `${formatAmount(publicStats.highlights.topDepositor.totalAmount)} deposited`
+                    : "No deposits recorded this month"
+                }
+              />
+              <PublicMetric
+                icon={CheckCircle2}
+                label="Top consumer"
+                value={publicStats.highlights.topConsumer?.name ?? "No data"}
+                detail={
+                  publicStats.highlights.topConsumer
+                    ? `${publicStats.highlights.topConsumer.totalWeightedMeals} weighted meals`
+                    : "No meal registrations recorded this month"
+                }
+              />
+              <PublicMetric
+                icon={CalendarClock}
+                label="Month status"
+                value={publicStats.finalization.isFinalized ? "Finalized" : "Open"}
+                detail={
+                  publicStats.finalization.rolledBackAt
+                    ? `Rolled back on ${formatDate(publicStats.finalization.rolledBackAt)}`
+                    : publicStats.finalization.isFinalized
                       ? `Finalized on ${formatDate(publicStats.finalization.finalizedAt)}`
-                      : "Month is currently open"}
-                  </p>
-                  <p>
-                    {publicStats.finalization.rolledBackAt
-                      ? `Rolled back on ${formatDate(publicStats.finalization.rolledBackAt)}`
-                      : publicStats.finalization.mealRate != null
-                        ? `Meal rate ${publicStats.finalization.mealRate}`
-                        : "Meal rate will appear after finalization"}
-                  </p>
-                </>
-              ) : publicStatsError ? (
-                <p>{publicStatsError}</p>
-              ) : (
-                <p>Public monthly stats are unavailable right now.</p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                      : `Tracking ${formatMonthLabel(publicStats.month)}`
+                }
+              />
+            </div>
+          ) : (
+            <div className={cn("rounded-xl border border-dashed px-4 py-6 text-sm text-muted-foreground")}>
+              Public stats could not be loaded: {publicStatsError ?? "Request failed."}
+            </div>
+          )}
+        </section>
 
-        {publicStats ? (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <PublicMetric
-              icon={Users}
-              label="Active members"
-              value={String(publicStats.community.activeMembers)}
-              detail={`${publicStats.community.activeManagers} active managers`}
-            />
-            <PublicMetric
-              icon={UtensilsCrossed}
-              label="Meals registered"
-              value={String(publicStats.meals.totalMealsRegistered)}
-              detail={`${publicStats.meals.totalRegistrations} registration rows`}
-            />
-            <PublicMetric
-              icon={Wallet}
-              label="Weighted meals"
-              value={String(publicStats.meals.totalWeightedMeals)}
-              detail={`${publicStats.meals.scheduleCount} scheduled day${publicStats.meals.scheduleCount === 1 ? "" : "s"}`}
-            />
-            <PublicMetric
-              icon={CalendarClock}
-              label="Month status"
-              value={publicStats.finalization.isFinalized ? "Finalized" : "Open"}
-              detail={
-                publicStats.finalization.rolledBackAt
-                  ? `Rolled back on ${formatDate(publicStats.finalization.rolledBackAt)}`
-                  : publicStats.finalization.isFinalized
-                    ? `Finalized on ${formatDate(publicStats.finalization.finalizedAt)}`
-                    : `Tracking ${formatMonthLabel(publicStats.month)}`
-              }
-            />
+        <section className="space-y-5">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+              How It Works
+            </p>
+            <h2 className="title-font text-3xl text-foreground">3 Steps from Meal Plan to Closeout</h2>
           </div>
-        ) : null}
+          <div className="grid gap-4 md:grid-cols-3">
+            {processSteps.map((step) => {
+              const Icon = step.icon;
 
-        <div className="grid gap-4 md:grid-cols-3">
-          {features.map((feature) => {
-            const Icon = feature.icon;
-
-            return (
-              <Card key={feature.title}>
-                <CardHeader className="space-y-4">
-                  <div className="flex size-12 items-center justify-center rounded-[calc(var(--radius)+0.5rem)] bg-accent text-accent-foreground">
-                    <Icon className="size-5" />
-                  </div>
-                  <CardTitle className="text-xl">{feature.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm leading-6 text-muted-foreground">{feature.description}</p>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-
-        {publicStatsQuery.isError ? (
-          <div className={cn("rounded-xl border border-dashed px-4 py-6 text-sm text-muted-foreground")}>
-            Public stats could not be loaded: {publicStatsError ?? "Request failed."}
+              return (
+                <Card key={step.title}>
+                  <CardHeader className="space-y-4">
+                    <div className="flex size-12 items-center justify-center rounded-[calc(var(--radius)+0.5rem)] bg-accent text-accent-foreground">
+                      <Icon className="size-5" />
+                    </div>
+                    <CardTitle className="text-xl">{step.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm leading-6 text-muted-foreground">{step.description}</p>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
-        ) : null}
+        </section>
+
+        <section className="space-y-5">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+              Core Capabilities
+            </p>
+            <h2 className="title-font text-3xl text-foreground">Built for daily operations and monthly accountability</h2>
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            {features.map((feature) => {
+              const Icon = feature.icon;
+
+              return (
+                <Card key={feature.title}>
+                  <CardHeader className="space-y-4">
+                    <div className="flex size-12 items-center justify-center rounded-[calc(var(--radius)+0.5rem)] bg-accent text-accent-foreground">
+                      <Icon className="size-5" />
+                    </div>
+                    <CardTitle className="text-xl">{feature.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm leading-6 text-muted-foreground">{feature.description}</p>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </section>
       </section>
     </main>
   );

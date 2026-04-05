@@ -6,6 +6,7 @@ export const apiRoutes = {
     public: "/stats/public",
     overview: "/stats/overview",
     managers: "/stats/managers",
+    daily: "/stats/daily",
     monthly: "/stats/monthly",
   },
   users: {

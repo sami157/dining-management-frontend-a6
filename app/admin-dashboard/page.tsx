@@ -1,13 +1,30 @@
 'use client'
 
 import { useQuery } from "@tanstack/react-query";
-import { CalendarClock, ShieldCheck, UserCheck, Users } from "lucide-react";
+import { CalendarClock, ShieldCheck, SunMedium, UserCheck, Users, UtensilsCrossed, Weight } from "lucide-react";
 import { PageIntro } from "@/components/layout/page-intro";
 import { LoadingState } from "@/components/shared/loading-state";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getManagerStats, getOverviewStats } from "@/lib/api/stats";
-import type { ManagerSummary } from "@/lib/types/stats";
+import { getDailyStats, getManagerStats, getOverviewStats } from "@/lib/api/stats";
+import type { DailyMealTypeStats, ManagerSummary } from "@/lib/types/stats";
 import { cn } from "@/lib/utils";
+
+const mealTypeLabels: Record<DailyMealTypeStats["type"], string> = {
+  BREAKFAST: "Breakfast",
+  LUNCH: "Lunch",
+  DINNER: "Dinner",
+};
+
+const getDhakaToday = () => {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Dhaka",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+
+  return formatter.format(new Date());
+};
 
 function OverviewMetric({
   icon: Icon,
@@ -54,6 +71,7 @@ function SectionEmptyState({ label }: { label: string }) {
 }
 
 export default function AdminDashboardPage() {
+  const today = getDhakaToday();
   const overviewQuery = useQuery({
     queryKey: ["stats", "overview"],
     queryFn: getOverviewStats,
@@ -62,16 +80,21 @@ export default function AdminDashboardPage() {
     queryKey: ["stats", "managers"],
     queryFn: getManagerStats,
   });
+  const dailyStatsQuery = useQuery({
+    queryKey: ["stats", "daily", today],
+    queryFn: () => getDailyStats(today),
+  });
 
-  if (overviewQuery.isPending || managersQuery.isPending) {
+  if (overviewQuery.isPending || managersQuery.isPending || dailyStatsQuery.isPending) {
     return <LoadingState label="Loading dashboard overview..." />;
   }
 
-  if (overviewQuery.isError || managersQuery.isError) {
+  if (overviewQuery.isError || managersQuery.isError || dailyStatsQuery.isError) {
     return <LoadingState label="We couldn't load the dashboard stats." />;
   }
 
   const overview = overviewQuery.data;
+  const dailyStats = dailyStatsQuery.data;
   const managers = (managersQuery.data ?? [])
     .slice()
     .sort((left, right) => Number(right.isActive) - Number(left.isActive) || left.name.localeCompare(right.name));
@@ -117,6 +140,74 @@ export default function AdminDashboardPage() {
             value={String(overview.finalization.lockedMonths)}
             detail="Months currently finalized and locked"
           />
+        </CardContent>
+      </Card>
+
+      <Card className="bg-card">
+        <CardHeader>
+          <CardTitle>Daily meal analytics</CardTitle>
+          <CardDescription>
+            Aggregated daily stats for {dailyStats.date} from `/stats/daily`.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <OverviewMetric
+              icon={UtensilsCrossed}
+              label="Meals registered"
+              value={String(dailyStats.meals.totalMealsRegistered)}
+              detail={`${dailyStats.meals.totalRegistrations} member registrations`}
+              tone="positive"
+            />
+            <OverviewMetric
+              icon={Weight}
+              label="Weighted meals"
+              value={String(dailyStats.meals.totalWeightedMeals)}
+              detail="Operational weighted total for the day"
+            />
+            <OverviewMetric
+              icon={SunMedium}
+              label="Available meals"
+              value={String(dailyStats.meals.availableMealCount)}
+              detail={dailyStats.hasSchedule ? "Meal slots configured on schedule" : "No schedule configured yet"}
+            />
+            <OverviewMetric
+              icon={CalendarClock}
+              label="Schedule status"
+              value={dailyStats.hasSchedule ? "Active" : "Empty"}
+              detail={dailyStats.hasSchedule ? "The day has a meal schedule" : "All daily totals correctly return zero"}
+            />
+          </div>
+
+          {dailyStats.meals.byType.length ? (
+            <div className="grid gap-3 md:grid-cols-3">
+              {dailyStats.meals.byType.map((meal) => (
+                <div key={meal.type} className="rounded-xl bg-background px-4 py-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-medium text-foreground">{mealTypeLabels[meal.type]}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {meal.totalMealsRegistered} meals, {meal.totalWeightedMeals} weighted
+                      </p>
+                    </div>
+                    <span
+                      className={cn(
+                        "rounded-full px-2 py-1 text-xs font-semibold",
+                        meal.isAvailable ? "bg-emerald-500/10 text-emerald-700" : "bg-muted text-muted-foreground"
+                      )}
+                    >
+                      {meal.isAvailable ? "Available" : "Unavailable"}
+                    </span>
+                  </div>
+                  <div className="mt-3 text-sm text-muted-foreground">
+                    Weight {meal.weight} | {meal.totalRegistrations} registrations
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <SectionEmptyState label="No meal schedule exists for today yet. Daily stats stay at zero instead of erroring." />
+          )}
         </CardContent>
       </Card>
 

@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CalendarDays,
+  ChartColumnIncreasing,
   Plus,
   Save,
   Sparkles,
@@ -27,7 +28,6 @@ import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue
@@ -43,7 +43,9 @@ import {
   getSchedules,
   updateScheduledMeal,
 } from "@/lib/api/schedules";
+import { getDailyStats as fetchDailyStats } from "@/lib/api/stats";
 import type { MealType, MealSchedule, ScheduledMeal } from "@/lib/types/meal";
+import type { DailyMealTypeStats } from "@/lib/types/stats";
 
 const mealTypeOptions: MealType[] = ["BREAKFAST", "LUNCH", "DINNER"];
 
@@ -52,21 +54,6 @@ const mealTypeLabels: Record<MealType, string> = {
   LUNCH: "Lunch",
   DINNER: "Dinner",
 };
-
-const monthOptions = [
-  { value: "01", label: "January" },
-  { value: "02", label: "February" },
-  { value: "03", label: "March" },
-  { value: "04", label: "April" },
-  { value: "05", label: "May" },
-  { value: "06", label: "June" },
-  { value: "07", label: "July" },
-  { value: "08", label: "August" },
-  { value: "09", label: "September" },
-  { value: "10", label: "October" },
-  { value: "11", label: "November" },
-  { value: "12", label: "December" },
-] as const;
 
 const weekdayFormatter = new Intl.DateTimeFormat("en-US", {
   weekday: "long",
@@ -143,7 +130,6 @@ const getDhakaToday = () => {
 };
 
 const getCurrentMonth = () => getDhakaToday().slice(0, 7);
-const getCurrentYear = () => getDhakaToday().slice(0, 4);
 const monthKeyToDate = (monthKey: string) => {
   const [year, month] = monthKey.split("-").map(Number);
 
@@ -196,6 +182,12 @@ const mapMealToEditor = (meal: ScheduledMeal): MealEditorState => ({
   isAvailable: meal.isAvailable,
 });
 
+const dailyMealTypeLabels: Record<DailyMealTypeStats["type"], string> = {
+  BREAKFAST: "Breakfast",
+  LUNCH: "Lunch",
+  DINNER: "Dinner",
+};
+
 const MealSchedulePage = () => {
   const queryClient = useQueryClient();
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth);
@@ -208,9 +200,14 @@ const MealSchedulePage = () => {
     queryKey: ["admin-schedules", selectedMonth],
     queryFn: () => getSchedules({ month: selectedMonth }),
   });
+  const dailyStatsQuery = useQuery({
+    queryKey: ["stats", "daily", newScheduleDate],
+    queryFn: () => fetchDailyStats(newScheduleDate),
+  });
 
   const syncSchedules = async () => {
     await queryClient.invalidateQueries({ queryKey: ["admin-schedules", selectedMonth] });
+    await queryClient.invalidateQueries({ queryKey: ["stats", "daily"] });
   };
 
   const createScheduleMutation = useMutation({
@@ -471,13 +468,15 @@ const MealSchedulePage = () => {
     });
   };
 
-  if (schedulesQuery.isPending) {
+  if (schedulesQuery.isPending || dailyStatsQuery.isPending) {
     return <LoadingState label="Loading meal schedules..." />;
   }
 
-  if (schedulesQuery.isError) {
+  if (schedulesQuery.isError || dailyStatsQuery.isError) {
     return <LoadingState label="We couldn't load the meal schedules." />;
   }
+
+  const dailyStats = dailyStatsQuery.data;
 
   return (
     <div className="space-y-8 mx-auto max-w-5xl">
@@ -598,6 +597,66 @@ const MealSchedulePage = () => {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ChartColumnIncreasing className="size-5" />
+            <span>Daily analytics for {newScheduleDate}</span>
+          </CardTitle>
+          <CardDescription>
+            Aggregated totals from `/stats/daily`. Days without a schedule still return zero and stay visible here.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-[calc(var(--radius)+0.25rem)] bg-muted p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Meals registered</p>
+              <p className="mt-2 text-2xl font-semibold text-foreground">{dailyStats.meals.totalMealsRegistered}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{dailyStats.meals.totalRegistrations} registrations</p>
+            </div>
+            <div className="rounded-[calc(var(--radius)+0.25rem)] bg-muted p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Weighted meals</p>
+              <p className="mt-2 text-2xl font-semibold text-foreground">{dailyStats.meals.totalWeightedMeals}</p>
+              <p className="mt-1 text-sm text-muted-foreground">Operational weighted total</p>
+            </div>
+            <div className="rounded-[calc(var(--radius)+0.25rem)] bg-muted p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Available meal count</p>
+              <p className="mt-2 text-2xl font-semibold text-foreground">{dailyStats.meals.availableMealCount}</p>
+              <p className="mt-1 text-sm text-muted-foreground">Configured meals for that date</p>
+            </div>
+            <div className="rounded-[calc(var(--radius)+0.25rem)] bg-muted p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Schedule state</p>
+              <p className="mt-2 text-2xl font-semibold text-foreground">
+                {dailyStats.hasSchedule ? "Scheduled" : "No schedule"}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">Zero totals are valid when a day is empty</p>
+            </div>
+          </div>
+
+          {dailyStats.meals.byType.length ? (
+            <div className="grid gap-4 md:grid-cols-3">
+              {dailyStats.meals.byType.map((meal) => (
+                <div key={meal.type} className="rounded-[calc(var(--radius)+0.25rem)] border bg-card p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-semibold text-foreground">{dailyMealTypeLabels[meal.type]}</p>
+                    <span className="text-sm text-muted-foreground">Weight {meal.weight}</span>
+                  </div>
+                  <div className="mt-3 space-y-1 text-sm text-muted-foreground">
+                    <p>{meal.totalRegistrations} registrations</p>
+                    <p>{meal.totalMealsRegistered} meals registered</p>
+                    <p>{meal.totalWeightedMeals} weighted meals</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-[calc(var(--radius)+0.25rem)] border border-dashed bg-muted/20 p-8 text-sm text-muted-foreground">
+              No meals are configured for {newScheduleDate} yet. You can keep using this panel as a zero-state analytics view.
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

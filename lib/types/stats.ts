@@ -11,6 +11,23 @@ export type PublicStatsResponse = {
     totalWeightedMeals: number;
     scheduleCount: number;
   };
+  finance: {
+    totalDeposits: number;
+    totalExpenses: number;
+  };
+  highlights: {
+    topDepositor: {
+      userId: string;
+      name: string;
+      totalAmount: number;
+    } | null;
+    topConsumer: {
+      userId: string;
+      name: string;
+      totalMealsRegistered: number;
+      totalWeightedMeals: number;
+    } | null;
+  };
   finalization: {
     isFinalized: boolean;
     finalizedAt: string | null;
@@ -47,6 +64,27 @@ export type ManagerSummary = {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+};
+
+export type DailyMealTypeStats = {
+  type: "BREAKFAST" | "LUNCH" | "DINNER";
+  isAvailable: boolean;
+  weight: number;
+  totalRegistrations: number;
+  totalMealsRegistered: number;
+  totalWeightedMeals: number;
+};
+
+export type DailyStatsResponse = {
+  date: string;
+  hasSchedule: boolean;
+  meals: {
+    availableMealCount: number;
+    totalRegistrations: number;
+    totalMealsRegistered: number;
+    totalWeightedMeals: number;
+    byType: DailyMealTypeStats[];
+  };
 };
 
 export type MonthlyStatsResponse = {
