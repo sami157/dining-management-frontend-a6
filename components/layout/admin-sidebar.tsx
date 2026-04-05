@@ -1,18 +1,26 @@
 'use client'
 
 import Link from "next/link";
+import {
+  ChartNoAxesCombined,
+  CookingPot,
+  HandCoins,
+  History,
+  Settings2,
+  Users,
+} from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/AuthProvider";
 
 const adminLinks = [
-  { href: "/admin-dashboard", label: "Overview" },
-  { href: "/admin-dashboard/configuration", label: "Configuration" },
-  { href: "/admin-dashboard/meal-schedule", label: "Meal Schedule" },
-  { href: "/admin-dashboard/fund-management", label: "Fund Management" },
-  { href: "/admin-dashboard/member-management", label: "Registration Management" },
-  { href: "/admin-dashboard/history", label: "History" },
+  { href: "/admin-dashboard", label: "Overview", icon: ChartNoAxesCombined },
+  { href: "/admin-dashboard/configuration", label: "Configuration", icon: Settings2 },
+  { href: "/admin-dashboard/meal-schedule", label: "Meal Schedule", icon: CookingPot },
+  { href: "/admin-dashboard/fund-management", label: "Fund Management", icon: HandCoins },
+  { href: "/admin-dashboard/member-management", label: "Registration Management", icon: Users },
+  { href: "/admin-dashboard/history", label: "History", icon: History },
 ];
 
 export function AdminSidebar() {
@@ -49,6 +57,7 @@ export function AdminSidebar() {
 
       <nav className="flex flex-1 flex-col gap-2 px-4 py-5">
         {adminLinks.map((link) => {
+          const Icon = link.icon;
           const active =
             pathname === link.href;
 
@@ -58,12 +67,13 @@ export function AdminSidebar() {
               href={link.href}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "rounded-lg px-4 py-3 font-medium transition",
+                "flex items-center gap-3 rounded-lg px-4 py-3 font-medium transition",
                 active
                   ? "bg-primary text-primary-foreground shadow-sm"
                   : "text-foreground/72 hover:bg-secondary/45"
               )}
             >
+              <Icon className="size-4 shrink-0" />
               {link.label}
             </Link>
           );

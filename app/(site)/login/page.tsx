@@ -26,7 +26,7 @@ type LoginFormValues = {
 
 export default function LoginPage() {
   const router = useRouter();
-  const { signIn, signInWithGoogle } = useAuth();
+  const { signIn, signInWithGoogle, refreshAppUser } = useAuth();
   const [googleLoading, setGoogleLoading] = useState(false);
   const [nextPath, setNextPath] = useState<string | null>(null);
   const {
@@ -46,7 +46,8 @@ export default function LoginPage() {
   }, []);
 
   async function handleSuccess() {
-    router.replace(nextPath || getDashboardRoute());
+    const resolvedAppUser = await refreshAppUser();
+    router.replace(nextPath || getDashboardRoute(resolvedAppUser?.role));
   }
 
   async function onSubmit(values: LoginFormValues) {
