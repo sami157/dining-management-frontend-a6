@@ -44,6 +44,7 @@ import { queryKeys } from "@/lib/query/keys";
 import { cn } from "@/lib/utils";
 import type { AppUser } from "@/lib/types/app-user";
 import type { Deposit, Expense, ExpenseCategory, FinalizedMonth } from "@/lib/types/finance";
+import { useAuth } from "@/providers/AuthProvider";
 
 const expenseCategoryOptions: ExpenseCategory[] = ["BAZAR", "GAS", "TRANSPORT", "OTHER"];
 
@@ -153,6 +154,10 @@ const formatMonthLabel = (value: string) => {
 
 const normalizeDateValue = (value: string) => (value.includes("T") ? value.slice(0, 10) : value);
 const getMonthFromDate = (value: string) => value.slice(0, 7);
+const isMonthLocked = (finalization?: FinalizedMonth | null) =>
+  Boolean(finalization?.finalizedAt) && !finalization?.rolledBackAt;
+const getMonthStatusLabel = (finalization?: FinalizedMonth | null) =>
+  isMonthLocked(finalization) ? "Locked" : finalization?.rolledBackAt ? "Rolled back" : "Open";
 
 const buildDepositFormState = (defaultUserId = "") => ({
   userId: defaultUserId,
@@ -299,6 +304,7 @@ function MemberPicker({
 
 export default function FundManagementPage() {
   const queryClient = useQueryClient();
+  const { refreshAppUser } = useAuth();
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth);
   const [depositForm, setDepositForm] = useState(() => buildDepositFormState());
   const [expenseForm, setExpenseForm] = useState(buildExpenseFormState);
@@ -328,19 +334,31 @@ export default function FundManagementPage() {
   const memberUsers = (usersQuery.data ?? []).filter((user) => user.role === "MEMBER" && user.isActive);
   const selectedDepositUserId = depositForm.userId || memberUsers[0]?.id || "";
 
+  const syncBalances = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.currentUser }),
+      queryClient.invalidateQueries({ queryKey: ["history"] }),
+    ]);
+    await refreshAppUser();
+  };
+
   const syncFinance = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["finance", "deposits"] }),
-      queryClient.invalidateQueries({ queryKey: ["finance", "expenses", selectedMonth] }),
+      queryClient.invalidateQueries({ queryKey: ["finance", "expenses"] }),
       queryClient.invalidateQueries({ queryKey: ["finance", "finalized-months"] }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.currentUser }),
+      queryClient.invalidateQueries({ queryKey: ["admin-schedules"] }),
+      queryClient.invalidateQueries({ queryKey: ["member-registrations"] }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.myRegistrations }),
+      queryClient.invalidateQueries({ queryKey: ["upcoming-schedules"] }),
     ]);
   };
 
   const createDepositMutation = useMutation({
     mutationFn: createDeposit,
     onSuccess: async () => {
-      await syncFinance();
+      await Promise.all([syncFinance(), syncBalances()]);
       setDepositForm(buildDepositFormState(memberUsers[0]?.id ?? ""));
       toast.success("Deposit recorded.");
     },
@@ -353,7 +371,7 @@ export default function FundManagementPage() {
     mutationFn: ({ id, payload }: { id: string; payload: Parameters<typeof updateDeposit>[1] }) =>
       updateDeposit(id, payload),
     onSuccess: async (_, variables) => {
-      await syncFinance();
+      await Promise.all([syncFinance(), syncBalances()]);
       setDepositEditors((current) => {
         const next = { ...current };
         delete next[variables.id];
@@ -369,7 +387,7 @@ export default function FundManagementPage() {
   const deleteDepositMutation = useMutation({
     mutationFn: deleteDeposit,
     onSuccess: async () => {
-      await syncFinance();
+      await Promise.all([syncFinance(), syncBalances()]);
       toast.success("Deposit deleted.");
     },
     onError: (error) => {
@@ -420,7 +438,7 @@ export default function FundManagementPage() {
   const finalizeMonthMutation = useMutation({
     mutationFn: finalizeMonth,
     onSuccess: async () => {
-      await syncFinance();
+      await Promise.all([syncFinance(), syncBalances()]);
       toast.success("Month finalized.");
     },
     onError: (error) => {
@@ -458,10 +476,11 @@ export default function FundManagementPage() {
     .slice()
     .sort((left, right) => right.month.localeCompare(left.month));
   const selectedMonthFinalization = finalizedMonths.find((item) => item.month === selectedMonth) ?? null;
+  const selectedMonthLocked = isMonthLocked(selectedMonthFinalization);
 
   const totalDeposits = selectedMonthDeposits.reduce((sum, deposit) => sum + toNumber(deposit.amount), 0);
   const totalExpenses = selectedMonthExpenses.reduce((sum, expense) => sum + toNumber(expense.amount), 0);
-  const closingBalance = totalDeposits - totalExpenses;
+  const netMonthChange = totalDeposits - totalExpenses;
   const expenseTotalsByCategory = expenseCategoryOptions.map((category) => ({
     category,
     total: selectedMonthExpenses
@@ -625,13 +644,23 @@ export default function FundManagementPage() {
             </div>
 
             <div className="rounded-xl bg-background px-4 py-3 text-sm text-muted-foreground">
-              {selectedMonthFinalization ? (
+              {selectedMonthLocked ? (
                 <div className="flex flex-wrap items-center gap-2">
                   <Lock className="size-4 text-emerald-600" />
                   <span>
                     {formatMonthLabel(selectedMonth)} is finalized.
                     {selectedMonthFinalization.finalizedAt
                       ? ` Locked on ${formatDate(selectedMonthFinalization.finalizedAt)}.`
+                      : ""}
+                  </span>
+                </div>
+              ) : selectedMonthFinalization?.rolledBackAt ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <HandCoins className="size-4 text-amber-600" />
+                  <span>
+                    {formatMonthLabel(selectedMonth)} was rolled back.
+                    {selectedMonthFinalization.rolledBackAt
+                      ? ` Reopened on ${formatDate(selectedMonthFinalization.rolledBackAt)}.`
                       : ""}
                   </span>
                 </div>
@@ -649,9 +678,9 @@ export default function FundManagementPage() {
               <SummaryMetric label="Deposits" value={formatMoney(totalDeposits)} tone="positive" />
               <SummaryMetric label="Expenses" value={formatMoney(totalExpenses)} tone="negative" />
               <SummaryMetric
-                label="Balance"
-                value={formatMoney(closingBalance)}
-                tone={closingBalance >= 0 ? "positive" : "negative"}
+                label="Net month change"
+                value={formatMoney(netMonthChange)}
+                tone={netMonthChange >= 0 ? "positive" : "negative"}
               />
               <SummaryMetric
                 label="Depositors"
@@ -665,13 +694,13 @@ export default function FundManagementPage() {
                   <div>
                     <p className="font-semibold text-lg text-foreground">Month Finalization</p>
                     <p className="text-sm text-muted-foreground">
-                      Once finalized, deposits, expenses, and registration mutations are blocked for that month.
+                      Deposits now update live balances immediately. Finalization only locks the month and deducts meal cost. Rollback reopens the month.
                     </p>
                   </div>
                   <Button
                     type="button"
                     onClick={() => finalizeMonthMutation.mutate({ month: selectedMonth })}
-                    disabled={Boolean(selectedMonthFinalization) || finalizeMonthMutation.isPending}
+                    disabled={selectedMonthLocked || finalizeMonthMutation.isPending}
                   >
                     {finalizeMonthMutation.isPending ? <Spinner className="size-4" /> : <Lock />}
                     <span>Finalize</span>
@@ -707,12 +736,25 @@ export default function FundManagementPage() {
                 <div key={item.month} className="rounded-xl bg-background px-4 py-3">
                   <div className="flex items-center justify-between gap-3">
                     <p className="font-medium text-foreground">{formatMonthLabel(item.month)}</p>
-                    <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-xs font-semibold text-emerald-700">
-                      Locked
+                    <span
+                      className={cn(
+                        "rounded-full px-2 py-1 text-xs font-semibold",
+                        isMonthLocked(item)
+                          ? "bg-emerald-500/10 text-emerald-700"
+                          : item.rolledBackAt
+                            ? "bg-amber-500/10 text-amber-700"
+                            : "bg-muted text-muted-foreground"
+                      )}
+                    >
+                      {getMonthStatusLabel(item)}
                     </span>
                   </div>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    {item.finalizedAt ? `Finalized on ${formatDate(item.finalizedAt)}` : "Finalized month"}
+                    {isMonthLocked(item)
+                      ? (item.finalizedAt ? `Finalized on ${formatDate(item.finalizedAt)}` : "Finalized month")
+                      : item.rolledBackAt
+                        ? `Rolled back on ${formatDate(item.rolledBackAt)}`
+                        : "Open month"}
                   </p>
                 </div>
               ))
@@ -775,7 +817,15 @@ export default function FundManagementPage() {
             </div>
 
             <div className="md:col-span-2">
-              <Button type="button" onClick={handleCreateDeposit} disabled={createDepositMutation.isPending || !memberUsers.length}>
+              <Button
+                type="button"
+                onClick={handleCreateDeposit}
+                disabled={
+                  createDepositMutation.isPending ||
+                  !memberUsers.length ||
+                  isMonthLocked(finalizedMonths.find((item) => item.month === getMonthFromDate(depositForm.date)) ?? null)
+                }
+              >
                 {createDepositMutation.isPending ? <Spinner className="size-4" /> : <Save />}
                 <span>Save deposit</span>
               </Button>
@@ -858,7 +908,14 @@ export default function FundManagementPage() {
             </div>
 
             <div className="md:col-span-2">
-              <Button type="button" onClick={handleCreateExpense} disabled={createExpenseMutation.isPending}>
+              <Button
+                type="button"
+                onClick={handleCreateExpense}
+                disabled={
+                  createExpenseMutation.isPending ||
+                  isMonthLocked(finalizedMonths.find((item) => item.month === getMonthFromDate(expenseForm.date)) ?? null)
+                }
+              >
                 {createExpenseMutation.isPending ? <Spinner className="size-4" /> : <Save />}
                 <span>Save expense</span>
               </Button>
@@ -940,7 +997,16 @@ export default function FundManagementPage() {
                         </div>
 
                         <div className="flex gap-2 md:col-span-2">
-                          <Button type="button" onClick={() => handleSaveDeposit(deposit.id)} disabled={updateDepositMutation.isPending}>
+                          <Button
+                            type="button"
+                            onClick={() => handleSaveDeposit(deposit.id)}
+                            disabled={
+                              updateDepositMutation.isPending ||
+                              isMonthLocked(
+                                finalizedMonths.find((item) => item.month === getMonthFromDate(editor.date)) ?? null
+                              )
+                            }
+                          >
                             {updateDepositMutation.isPending ? <Spinner className="size-4" /> : <Save />}
                             <span>Save</span>
                           </Button>
@@ -993,7 +1059,10 @@ export default function FundManagementPage() {
                             size="icon-sm"
                             variant="destructive"
                             onClick={() => deleteDepositMutation.mutate(deposit.id)}
-                            disabled={deleteDepositMutation.isPending}
+                            disabled={
+                              deleteDepositMutation.isPending ||
+                              isMonthLocked(finalizedMonths.find((item) => item.month === deposit.month) ?? null)
+                            }
                           >
                             <Trash2 />
                           </Button>
@@ -1131,7 +1200,16 @@ export default function FundManagementPage() {
                       </div>
 
                       <div className="flex gap-2 md:col-span-2">
-                        <Button type="button" onClick={() => handleSaveExpense(expense.id)} disabled={updateExpenseMutation.isPending}>
+                        <Button
+                          type="button"
+                          onClick={() => handleSaveExpense(expense.id)}
+                          disabled={
+                            updateExpenseMutation.isPending ||
+                            isMonthLocked(
+                              finalizedMonths.find((item) => item.month === getMonthFromDate(editor.date)) ?? null
+                            )
+                          }
+                        >
                           {updateExpenseMutation.isPending ? <Spinner className="size-4" /> : <Save />}
                           <span>Save</span>
                         </Button>
@@ -1187,7 +1265,10 @@ export default function FundManagementPage() {
                           size="icon-sm"
                           variant="destructive"
                           onClick={() => deleteExpenseMutation.mutate(expense.id)}
-                          disabled={deleteExpenseMutation.isPending}
+                          disabled={
+                            deleteExpenseMutation.isPending ||
+                            isMonthLocked(finalizedMonths.find((item) => item.month === expense.month) ?? null)
+                          }
                         >
                           <Trash2 />
                         </Button>
@@ -1208,8 +1289,8 @@ export default function FundManagementPage() {
               <p className="font-medium text-foreground">Net Balacne for {formatMonthLabel(selectedMonth)}</p>
               <p className="text-sm text-muted-foreground">Deposits minus expenses for the selected month.</p>
             </div>
-            <p className={cn("text-lg font-semibold", closingBalance >= 0 ? "text-emerald-600" : "text-rose-600")}>
-              {formatMoney(closingBalance)}
+            <p className={cn("text-lg font-semibold", netMonthChange >= 0 ? "text-emerald-600" : "text-rose-600")}>
+              {formatMoney(netMonthChange)}
             </p>
           </div>
         </CardContent>

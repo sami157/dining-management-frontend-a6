@@ -42,6 +42,8 @@ export type FinalizedMonth = {
   mealRate?: NumberLike | null;
   finalizedAt?: string | null;
   finalizedById?: string | null;
+  rolledBackAt?: string | null;
+  rolledBackById?: string | null;
   createdAt?: string;
   updatedAt?: string;
 };

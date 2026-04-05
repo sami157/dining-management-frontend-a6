@@ -91,6 +91,10 @@ const formatMonthLabel = (value: string) => {
 
   return monthFormatter.format(parsed);
 };
+const isMonthLocked = (finalization?: FinalizedMonth | null) =>
+  Boolean(finalization?.finalizedAt) && !finalization?.rolledBackAt;
+const getMonthStatusLabel = (finalization?: FinalizedMonth | null) =>
+  isMonthLocked(finalization) ? "Finalized and locked" : finalization?.rolledBackAt ? "Rolled back and unlocked" : "Open";
 
 function HistoryMetric({
   icon: Icon,
@@ -218,8 +222,8 @@ export default function HistoryPage() {
       <div className="mx-auto max-w-5xl space-y-8">
         <PageIntro
           eyebrow="Admin"
-          title="Finalized history"
-          description="Review locked month summaries and read-only finance history after closeout."
+          title="Month history"
+          description="Review locked and rolled-back month summaries after closeout."
         />
         <SectionEmptyState label="No month has been finalized yet." />
       </div>
@@ -294,15 +298,15 @@ export default function HistoryPage() {
     <div className="mx-auto max-w-5xl space-y-8">
       <PageIntro
         eyebrow="Admin"
-        title="Finalized history"
-        description="Review locked month summaries, contribution ledgers, expense breakdowns, and meal registration totals after closeout."
+        title="Month history"
+        description="Review locked and rolled-back month summaries, contribution ledgers, expense breakdowns, and meal registration totals after closeout."
       />
 
       <Card className="bg-card">
         <CardHeader className="gap-4">
           <div>
-            <CardTitle>Finalized month</CardTitle>
-            <CardDescription>Switch between locked months to inspect their read-only summary.</CardDescription>
+            <CardTitle>Month history</CardTitle>
+            <CardDescription>Switch between finalized and rolled-back months to inspect their status.</CardDescription>
           </div>
           <div className="max-w-xs">
             <Select value={effectiveSelectedMonth} onValueChange={setSelectedMonth}>
@@ -336,7 +340,7 @@ export default function HistoryPage() {
           />
           <HistoryMetric
             icon={Landmark}
-            label="Closing balance"
+            label="Net month change"
             value={formatMoney(closingBalance)}
             detail={`Meal rate ${formatMoney(selectedFinalization.mealRate ?? 0)}`}
             tone={closingBalance >= 0 ? "positive" : "negative"}
@@ -392,8 +396,16 @@ export default function HistoryPage() {
               <p className="mt-2 font-semibold text-foreground">{formatMonthLabel(effectiveSelectedMonth)}</p>
             </div>
             <div className="rounded-xl bg-background px-4 py-3">
+              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Status</p>
+              <p className="mt-2 font-semibold text-foreground">{getMonthStatusLabel(selectedFinalization)}</p>
+            </div>
+            <div className="rounded-xl bg-background px-4 py-3">
               <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Finalized on</p>
               <p className="mt-2 font-semibold text-foreground">{formatDate(selectedFinalization.finalizedAt)}</p>
+            </div>
+            <div className="rounded-xl bg-background px-4 py-3">
+              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Rolled back on</p>
+              <p className="mt-2 font-semibold text-foreground">{formatDate(selectedFinalization.rolledBackAt)}</p>
             </div>
             <div className="rounded-xl bg-background px-4 py-3">
               <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Meal rate</p>

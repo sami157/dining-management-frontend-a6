@@ -29,5 +29,6 @@ export const apiRoutes = {
   },
   finalize: {
     root: "/finalize",
+    rollback: (month: string) => `/finalize/${month}/rollback`,
   },
 } as const;

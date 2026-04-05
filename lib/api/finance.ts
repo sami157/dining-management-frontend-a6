@@ -120,3 +120,11 @@ export async function finalizeMonth(payload: FinalizeMonthPayload) {
 
   return response.data.data;
 }
+
+export async function rollbackFinalizedMonth(month: string) {
+  const response = await api.post<ApiSuccessResponse<FinalizedMonth>>(
+    apiRoutes.finalize.rollback(month)
+  );
+
+  return response.data.data;
+}

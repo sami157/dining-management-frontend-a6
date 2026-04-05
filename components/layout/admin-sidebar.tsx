@@ -7,6 +7,7 @@ import {
   HandCoins,
   History,
   Settings2,
+  ShieldCheck,
   Users,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
@@ -22,6 +23,9 @@ const adminLinks = [
   { href: "/admin-dashboard/member-management", label: "Registration Management", icon: Users },
   { href: "/admin-dashboard/history", label: "History", icon: History },
 ];
+const adminOnlyLinks = [
+  { href: "/admin-dashboard/admin-actions", label: "Admin Actions", icon: ShieldCheck },
+];
 
 export function AdminSidebar() {
   const pathname = usePathname();
@@ -29,6 +33,7 @@ export function AdminSidebar() {
   const { appUser, logOut } = useAuth();
   const canOpenMemberDashboard =
     appUser?.role === "ADMIN" || appUser?.role === "MANAGER";
+  const links = appUser?.role === "ADMIN" ? [...adminLinks, ...adminOnlyLinks] : adminLinks;
 
   return (
     <aside className="flex w-full flex-col border-b border-border bg-card/92 lg:min-h-screen lg:w-72 lg:border-b-0 lg:border-r">
@@ -67,7 +72,7 @@ export function AdminSidebar() {
       </div>
 
       <nav className="flex flex-1 flex-col gap-2 px-4 py-5">
-        {adminLinks.map((link) => {
+        {links.map((link) => {
           const Icon = link.icon;
           const active =
             pathname === link.href;
