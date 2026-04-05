@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { SunMoon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getDashboardRoute } from "@/lib/auth/routes";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/AuthProvider";
+import { useTheme } from "@/providers/ThemeProvider";
 
 const guestLinks = [
   { href: "/", label: "Home" },
@@ -17,6 +19,7 @@ export function SiteHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, appUser, logOut } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const hasAdminDashboardAccess =
     appUser?.role === "ADMIN" || appUser?.role === "MANAGER";
 
@@ -42,8 +45,8 @@ export function SiteHeader() {
     : guestLinks;
 
   return (
-    <header className="bg-muted backdrop-blur">
-      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-2">
+    <header className="sticky top-0 z-40 bg-background/10 backdrop-blur-md">
+      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-3">
         <Link href="/" className="flex flex-col">
           <span className="font-semibold uppercase tracking-[0.28em] text-muted-foreground">
             Dining
@@ -72,6 +75,16 @@ export function SiteHeader() {
         </nav>
 
         <div className="order-2 flex items-center gap-3 md:order-3">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={toggleTheme}
+            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            <SunMoon className="size-4" />
+          </Button>
+
           {appUser ? (
             <div className="hidden rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground sm:block">
               {appUser.role}
