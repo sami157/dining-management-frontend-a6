@@ -160,7 +160,7 @@ const UserDashboardPage = () => {
   const { appUser, user } = useAuth();
   const [pendingMealId, setPendingMealId] = useState<string | null>(null);
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth);
-  const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
+  const [selectedDateKey, setSelectedDateKey] = useState(getDhakaToday);
   const upcomingSchedulesQuery = useQuery({
     queryKey: queryKeys.upcomingSchedules([selectedMonth]),
     queryFn: () => getSchedules({ month: selectedMonth }),
@@ -242,9 +242,11 @@ const UserDashboardPage = () => {
   const scheduledDateKeys = new Set(
     selectedMonthSchedules.map((schedule) => getDateKey(schedule.date))
   );
-  const fallbackDateKey = selectedMonthSchedules[0]
-    ? getDateKey(selectedMonthSchedules[0].date)
-    : `${selectedMonth}-01`;
+  const fallbackDateKey = getDhakaToday().startsWith(selectedMonth)
+    ? getDhakaToday()
+    : (selectedMonthSchedules[0]
+      ? getDateKey(selectedMonthSchedules[0].date)
+      : `${selectedMonth}-01`);
   const effectiveSelectedDateKey =
     selectedDateKey && selectedDateKey.startsWith(selectedMonth)
       ? selectedDateKey

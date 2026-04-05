@@ -246,7 +246,7 @@ export default function MemberManagementPage() {
   const queryClient = useQueryClient();
   const [selectedMemberId, setSelectedMemberId] = useState("");
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth);
-  const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
+  const [selectedDateKey, setSelectedDateKey] = useState(getDhakaToday);
   const [pendingMealId, setPendingMealId] = useState<string | null>(null);
 
   const usersQuery = useQuery({
@@ -356,9 +356,11 @@ export default function MemberManagementPage() {
     .filter((schedule) => schedule.meals.length > 0);
 
   const scheduledDateKeys = new Set(selectedMonthSchedules.map((schedule) => getDateKey(schedule.date)));
-  const fallbackDateKey = selectedMonthSchedules[0]
-    ? getDateKey(selectedMonthSchedules[0].date)
-    : `${selectedMonth}-01`;
+  const fallbackDateKey = getDhakaToday().startsWith(selectedMonth)
+    ? getDhakaToday()
+    : (selectedMonthSchedules[0]
+      ? getDateKey(selectedMonthSchedules[0].date)
+      : `${selectedMonth}-01`);
   const effectiveSelectedDateKey =
     selectedDateKey && selectedDateKey.startsWith(selectedMonth) ? selectedDateKey : fallbackDateKey;
   const selectedSchedule =

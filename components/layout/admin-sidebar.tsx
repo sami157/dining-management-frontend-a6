@@ -27,6 +27,8 @@ export function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { appUser, logOut } = useAuth();
+  const canOpenMemberDashboard =
+    appUser?.role === "ADMIN" || appUser?.role === "MANAGER";
 
   return (
     <aside className="flex w-full flex-col border-b border-border bg-card/92 lg:min-h-screen lg:w-72 lg:border-b-0 lg:border-r">
@@ -34,25 +36,34 @@ export function AdminSidebar() {
         <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
           Control Center
         </p>
-        <h2 className="title-font text-2xl text-foreground">Admin Dashboard</h2>
+        <h2 className="title-font text-2xl text-foreground">Manager Dashboard</h2>
         <p className="text-sm text-muted-foreground">
           Signed in as {appUser?.name ?? "User"} ({appUser?.role ?? "Unknown"})
         </p>
         <div className="flex gap-8">
-        <Button variant="outline" className="flex-1" onClick={() => router.push("/")}>
-          Home
-        </Button>
-        <Button
-          variant="destructive"
-          className="flex-1"
-          onClick={async () => {
-            await logOut();
-            router.replace("/login");
-          }}
-        >
-          Logout
-        </Button>
-      </div>
+          <Button variant="outline" className="flex-1" onClick={() => router.push("/")}>
+            Home
+          </Button>
+          <Button
+            variant="destructive"
+            className="flex-1"
+            onClick={async () => {
+              await logOut();
+              router.replace("/login");
+            }}
+          >
+            Logout
+          </Button>
+        </div>
+        {canOpenMemberDashboard ? (
+          <Button
+            variant="secondary"
+            className="w-full"
+            onClick={() => router.push("/user-dashboard")}
+          >
+            Open My Dashboard
+          </Button>
+        ) : null}
       </div>
 
       <nav className="flex flex-1 flex-col gap-2 px-4 py-5">

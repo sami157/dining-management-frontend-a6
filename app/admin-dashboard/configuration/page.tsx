@@ -1,7 +1,7 @@
 'use client'
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Clock3, Edit3, Minus, Plus, Save, Settings2 } from "lucide-react";
+import { Check, ChevronsUpDown, Clock3, Edit3, Minus, Plus, Save, Settings2, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { PageIntro } from "@/components/layout/page-intro";
@@ -10,12 +10,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { createMealDeadline, getMealDeadlines, updateMealDeadline } from "@/lib/api/deadlines";
 import { getWeeklyMealTemplates, updateWeeklyMealTemplate } from "@/lib/api/templates";
+import { getUsers, updateUserRole } from "@/lib/api/users";
 import { queryKeys } from "@/lib/query/keys";
+import type { AppUser, UserRole } from "@/lib/types/app-user";
 import type { DayOfWeek, MealType } from "@/lib/types/meal";
+import { cn } from "@/lib/utils";
+import { useAuth } from "@/providers/AuthProvider";
 
 const mealTypeOptions: MealType[] = ["BREAKFAST", "LUNCH", "DINNER"];
 const mealTypeLabels: Record<MealType, string> = {
@@ -44,12 +50,107 @@ type DeadlineEditorState = {
   offsetDays: string;
 };
 
+const roleOptions: UserRole[] = ["MEMBER", "MANAGER", "ADMIN"];
+const roleLabels: Record<UserRole, string> = {
+  ADMIN: "Admin",
+  MANAGER: "Manager",
+  MEMBER: "Member",
+};
+
+function UserPicker({
+  value,
+  users,
+  onChange,
+  placeholder = "Select user",
+}: {
+  value: string;
+  users: AppUser[];
+  onChange: (value: string) => void;
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const normalizedSearch = search.trim().toLowerCase();
+  const filteredUsers = users.filter((user) => {
+    if (!normalizedSearch) {
+      return true;
+    }
+
+    return (
+      user.name.toLowerCase().includes(normalizedSearch) ||
+      user.email.toLowerCase().includes(normalizedSearch) ||
+      (user.mobile ?? "").toLowerCase().includes(normalizedSearch)
+    );
+  });
+
+  const selectedUser = users.find((user) => user.id === value) ?? null;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between font-normal"
+        >
+          <span className={cn("truncate", !selectedUser && "text-muted-foreground")}>
+            {selectedUser ? selectedUser.name : placeholder}
+          </span>
+          <ChevronsUpDown className="size-4 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
+        <div className="border-b p-2">
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search user..."
+          />
+        </div>
+        <div className="max-h-64 overflow-y-auto p-1">
+          {filteredUsers.length ? (
+            filteredUsers.map((user) => (
+              <button
+                key={user.id}
+                type="button"
+                className="focus:bg-accent focus:text-accent-foreground flex w-full items-center justify-between rounded-md px-2 py-2 text-left text-sm outline-none hover:bg-accent"
+                onClick={() => {
+                  onChange(user.id);
+                  setOpen(false);
+                  setSearch("");
+                }}
+              >
+                <span className="min-w-0">
+                  <span className="block truncate font-medium">{user.name}</span>
+                  <span className="block truncate text-xs text-muted-foreground">
+                    {user.email} • {roleLabels[user.role]}
+                  </span>
+                </span>
+                <Check className={cn("size-4 shrink-0", user.id === value ? "opacity-100" : "opacity-0")} />
+              </button>
+            ))
+          ) : (
+            <div className="px-2 py-4 text-center text-sm text-muted-foreground">No user found.</div>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 const ConfigurationPage = () => {
   const queryClient = useQueryClient();
+  const { appUser, refreshAppUser } = useAuth();
+  const isAdmin = appUser?.role === "ADMIN";
   const [activeDeadlineTab, setActiveDeadlineTab] = useState<MealType>("BREAKFAST");
   const [deadlineEditors, setDeadlineEditors] = useState<Partial<Record<MealType, DeadlineEditorState>>>({});
   const [templateEditors, setTemplateEditors] = useState<Partial<Record<DayOfWeek, MealType[]>>>({});
   const [isEditingTemplates, setIsEditingTemplates] = useState(false);
+  const [selectedRoleUserId, setSelectedRoleUserId] = useState("");
+  const [roleDraft, setRoleDraft] = useState<UserRole>("MEMBER");
 
   const deadlinesQuery = useQuery({
     queryKey: queryKeys.mealDeadlines,
@@ -59,6 +160,16 @@ const ConfigurationPage = () => {
     queryKey: ["weekly-meal-templates"],
     queryFn: getWeeklyMealTemplates,
   });
+  const usersQuery = useQuery({
+    queryKey: ["admin-users"],
+    queryFn: getUsers,
+    enabled: isAdmin,
+  });
+
+  const users = (usersQuery.data ?? [])
+    .slice()
+    .sort((left, right) => left.name.localeCompare(right.name) || left.email.localeCompare(right.email));
+  const selectedRoleUser = users.find((user) => user.id === selectedRoleUserId) ?? null;
 
   const saveDeadlineMutation = useMutation({
     mutationFn: async ({
@@ -99,6 +210,24 @@ const ConfigurationPage = () => {
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : "Failed to save meal template.");
+    },
+  });
+  const updateUserRoleMutation = useMutation({
+    mutationFn: ({ userId, role }: { userId: string; role: UserRole }) => updateUserRole(userId, role),
+    onSuccess: async (updatedUser) => {
+      await queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+
+      if (updatedUser.id === appUser?.id) {
+        await queryClient.invalidateQueries({ queryKey: queryKeys.currentUser });
+        await refreshAppUser();
+      }
+
+      setSelectedRoleUserId(updatedUser.id);
+      setRoleDraft(updatedUser.role);
+      toast.success(`Role updated to ${roleLabels[updatedUser.role]}.`);
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Failed to update user role.");
     },
   });
 
@@ -207,6 +336,30 @@ const ConfigurationPage = () => {
     }));
 
     await saveTemplateMutation.mutateAsync(payloads);
+  };
+
+  const handleRoleUserChange = (userId: string) => {
+    setSelectedRoleUserId(userId);
+
+    const selectedUser = users.find((user) => user.id === userId);
+    setRoleDraft(selectedUser?.role ?? "MEMBER");
+  };
+
+  const handleRoleSave = async () => {
+    if (!selectedRoleUser) {
+      toast.error("Select a user first.");
+      return;
+    }
+
+    if (selectedRoleUser.role === roleDraft) {
+      toast.error("Choose a different role before saving.");
+      return;
+    }
+
+    await updateUserRoleMutation.mutateAsync({
+      userId: selectedRoleUser.id,
+      role: roleDraft,
+    });
   };
 
   return (
@@ -355,6 +508,85 @@ const ConfigurationPage = () => {
           </CardContent>
         </Card>
       </div>
+
+      {isAdmin ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ShieldCheck className="size-5" />
+              <span>Role Assignment</span>
+            </CardTitle>
+            <CardDescription>
+              Select a user, choose a new role, and save. Managers can view this page but cannot change roles.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-[minmax(0,1.4fr)_minmax(0,0.8fr)_auto]">
+            <div className="space-y-2">
+              <Label>Select user</Label>
+              {usersQuery.isPending ? (
+                <div className="flex h-10 items-center rounded-md border border-input px-3 text-sm text-muted-foreground">
+                  Loading users...
+                </div>
+              ) : usersQuery.isError ? (
+                <div className="flex h-10 items-center rounded-md border border-destructive/30 px-3 text-sm text-destructive">
+                  Couldn&apos;t load users.
+                </div>
+              ) : users.length ? (
+                <UserPicker
+                  value={selectedRoleUserId}
+                  users={users}
+                  onChange={handleRoleUserChange}
+                  placeholder="Search and select user"
+                />
+              ) : (
+                <div className="flex h-10 items-center rounded-md border border-input px-3 text-sm text-muted-foreground">
+                  No users available.
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Role</Label>
+              <Select
+                value={roleDraft}
+                onValueChange={(value) => setRoleDraft(value as UserRole)}
+                disabled={!selectedRoleUser || updateUserRoleMutation.isPending}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  {roleOptions.map((role) => (
+                    <SelectItem key={role} value={role}>
+                      {roleLabels[role]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-end">
+              <Button
+                type="button"
+                onClick={handleRoleSave}
+                disabled={!selectedRoleUser || updateUserRoleMutation.isPending || selectedRoleUser.role === roleDraft}
+              >
+                {updateUserRoleMutation.isPending ? <Spinner className="size-4" /> : <Save />}
+                <span>Save role</span>
+              </Button>
+            </div>
+
+            {selectedRoleUser ? (
+              <div className="rounded-xl bg-muted px-4 py-3 text-sm text-muted-foreground md:col-span-3">
+                <span className="font-medium text-foreground">{selectedRoleUser.name}</span>
+                <span> currently has the </span>
+                <span className="font-medium text-foreground">{roleLabels[selectedRoleUser.role]}</span>
+                <span> role.</span>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 };

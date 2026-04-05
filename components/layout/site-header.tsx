@@ -17,17 +17,26 @@ export function SiteHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, appUser, logOut } = useAuth();
+  const hasAdminDashboardAccess =
+    appUser?.role === "ADMIN" || appUser?.role === "MANAGER";
 
   const links = user
     ? [
         { href: "/", label: "Home" },
-        {
-          href: getDashboardRoute(appUser?.role),
-          label:
-            appUser?.role === "ADMIN" || appUser?.role === "MANAGER"
-              ? "Dashboard"
-              : "My Dashboard",
-        },
+        ...(hasAdminDashboardAccess
+          ? [
+              { href: "/admin-dashboard", label: "Manager Dashboard" },
+              { href: "/user-dashboard", label: "My Dashboard" },
+            ]
+          : [
+              {
+                href: getDashboardRoute(appUser?.role),
+                label:
+                  appUser?.role === "ADMIN" || appUser?.role === "MANAGER"
+                    ? "Dashboard"
+                    : "My Dashboard",
+              },
+            ]),
         { href: "/user-profile", label: "Profile" },
       ]
     : guestLinks;

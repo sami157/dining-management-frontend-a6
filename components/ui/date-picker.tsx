@@ -55,6 +55,7 @@ function DatePicker({
   disabled = false,
 }: DatePickerProps) {
   const selectedDate = parseDateValue(value)
+  const defaultMonth = selectedDate ?? new Date()
 
   return (
     <Popover>
@@ -77,6 +78,7 @@ function DatePicker({
       <PopoverContent className="w-auto p-0" align="start">
         <Calendar
           mode="single"
+          month={defaultMonth}
           selected={selectedDate}
           onSelect={(date) => onChange(formatDateValue(date))}
         />

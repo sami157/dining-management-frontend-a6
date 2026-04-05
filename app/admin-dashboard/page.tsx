@@ -5,8 +5,8 @@ export default function AdminDashboardPage() {
   return (
     <div className="space-y-8">
       <PageIntro
-        eyebrow="Admin"
-        title="Dashboard overview scaffold"
+        eyebrow="Manager"
+        title="Manager dashboard overview"
         description="Manager and admin users land here first. This shell persists the sidebar across all child routes."
       />
       <PlaceholderGrid
