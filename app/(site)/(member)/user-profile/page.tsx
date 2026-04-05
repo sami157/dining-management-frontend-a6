@@ -226,18 +226,18 @@ export default function UserProfilePage() {
           <Separator className="my-6" />
           <div className="space-y-3">
             <div>
-              <p className="text-zinc-500">Email</p>
-              <p className="font-medium text-sm text-zinc-950">{profile.email}</p>
+              <p className="text-muted-foreground">Email</p>
+              <p className="font-medium text-sm">{profile.email}</p>
             </div>
 
             <div>
-              <p className="text-zinc-500">Role</p>
-              <p className="font-medium text-sm text-zinc-950">{profile.role}</p>
+              <p className="text-muted-foreground">Role</p>
+              <p className="font-medium text-sm">{profile.role}</p>
             </div>
 
             <div>
-              <p className="text-zinc-500">Balance</p>
-              <p className="font-medium text-sm text-zinc-950">{String(profile.balance)}</p>
+              <p className="text-muted-foreground">Balance</p>
+              <p className="font-medium text-sm">{String(profile.balance)}</p>
             </div>
           </div>
         </CardContent>
