@@ -302,7 +302,7 @@ const UserDashboardPage = () => {
         <div className="space-y-6">
           <div className="flex flex-col gap-2">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-              Select date
+              Select Date
             </p>
           </div>
           <Calendar className="w-full p-4 rounded-2xl bg-muted"
@@ -327,7 +327,7 @@ const UserDashboardPage = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>Month at a Glance</CardTitle>
+              <CardTitle>Month At A Glance</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2 md:grid-cols-1">
               <div className="rounded-lg bg-muted p-4">
@@ -373,7 +373,7 @@ const UserDashboardPage = () => {
           ) : (
             <Card>
               <CardHeader>
-                <CardTitle>No schedules for this month</CardTitle>
+                <CardTitle>No Schedules For This Month</CardTitle>
                 <CardDescription>
                   No meal cards are available for {selectedMonth} yet.
                 </CardDescription>

@@ -412,7 +412,7 @@ export default function MemberManagementPage() {
           <Card className="bg-card w-100 mx-auto">
             <CardHeader>
               <div>
-                <CardTitle>Select member</CardTitle>
+                <CardTitle>Select Member</CardTitle>
                 <CardDescription>Choose the member whose registrations you want to override.</CardDescription>
               </div>
             </CardHeader>
@@ -436,7 +436,7 @@ export default function MemberManagementPage() {
 
           <Card className="bg-card">
             <CardHeader>
-              <CardTitle>Select date</CardTitle>
+              <CardTitle>Select Date</CardTitle>
               <CardDescription>Choose a month and a scheduled day before editing that member&apos;s meal count.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -479,7 +479,7 @@ export default function MemberManagementPage() {
             ) : (
               <Card className="bg-card">
                 <CardHeader>
-                  <CardTitle>No schedule on this date</CardTitle>
+                  <CardTitle>No Schedule On This Date</CardTitle>
                   <CardDescription>
                     There is no meal schedule for {formatDateLabel(effectiveSelectedDateKey)}.
                   </CardDescription>
@@ -489,7 +489,7 @@ export default function MemberManagementPage() {
           ) : (
             <Card className="bg-card">
               <CardHeader>
-                <CardTitle>No schedules for this month</CardTitle>
+                <CardTitle>No Schedules For This Month</CardTitle>
                 <CardDescription>No meal schedule exists for {selectedMonth}.</CardDescription>
               </CardHeader>
             </Card>

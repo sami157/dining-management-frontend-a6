@@ -130,14 +130,14 @@ export default function UserProfilePage() {
   return (
     <main className="mx-auto md:w-100 flex w-full items-center max-w-5xl flex-1 flex-col gap-4 px-4 py-6">
       <PageIntro
-        title="Your profile"
+        title="Your Profile"
         description="View and update your proifle information, including your name, contact details and profile picture."
       />
       <Card className="md:w-100">
         <CardHeader>
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1.5">
-              <CardTitle>{isEditing ? "Edit profile" : "Profile details"}</CardTitle>
+              <CardTitle>{isEditing ? "Edit Profile" : "Profile Details"}</CardTitle>
               <CardDescription>
                 {isEditing
                   ? "Update your user prifile information and save changes."
@@ -150,8 +150,8 @@ export default function UserProfilePage() {
                   <Button
                     type="button"
                     size="icon"
-                    aria-label="Confirm changes"
-                    title="Confirm changes"
+                    aria-label="Confirm Changes"
+                    title="Confirm Changes"
                     onClick={handleSubmit(onSubmit)}
                     disabled={isSubmitting || updateProfileMutation.isPending}
                   >
@@ -165,8 +165,8 @@ export default function UserProfilePage() {
                     type="button"
                     size="icon"
                     variant="ghost"
-                    aria-label="Cancel editing"
-                    title="Cancel editing"
+                    aria-label="Cancel Editing"
+                    title="Cancel Editing"
                     onClick={handleEditCancel}
                     disabled={isSubmitting || updateProfileMutation.isPending}
                   >
@@ -178,8 +178,8 @@ export default function UserProfilePage() {
                   type="button"
                   size="icon"
                   variant="outline"
-                  aria-label="Edit profile"
-                  title="Edit profile"
+                  aria-label="Edit Profile"
+                  title="Edit Profile"
                   onClick={handleEditStart}
                 >
                   <Pencil />

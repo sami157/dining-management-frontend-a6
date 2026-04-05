@@ -103,16 +103,13 @@ export default function AdminDashboardPage() {
     <div className="mx-auto max-w-5xl space-y-8">
       <PageIntro
         eyebrow="Manager"
-        title="Manager dashboard overview"
+        title="Manager Dashboard Overview"
         description="Live operational counts and manager directory data pulled from the new stats endpoints."
       />
 
       <Card className="bg-card">
         <CardHeader>
-          <CardTitle>System overview</CardTitle>
-          <CardDescription>
-            Snapshot for {overview.currentMonth}. Locked months and user-role counts come from `/stats/overview`.
-          </CardDescription>
+          <CardTitle>System Overview</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <OverviewMetric
@@ -145,10 +142,7 @@ export default function AdminDashboardPage() {
 
       <Card className="bg-card">
         <CardHeader>
-          <CardTitle>Daily meal analytics</CardTitle>
-          <CardDescription>
-            Aggregated daily stats for {dailyStats.date} from `/stats/daily`.
-          </CardDescription>
+          <CardTitle>Daily Meal Analytics</CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -214,7 +208,7 @@ export default function AdminDashboardPage() {
       <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
         <Card className="bg-card">
           <CardHeader>
-            <CardTitle>Role distribution</CardTitle>
+            <CardTitle>Role Distribution</CardTitle>
             <CardDescription>Current user split across admin, manager, and member roles.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3">
@@ -247,8 +241,7 @@ export default function AdminDashboardPage() {
 
         <Card className="bg-card">
           <CardHeader>
-            <CardTitle>Manager directory</CardTitle>
-            <CardDescription>Directory data loaded from `/stats/managers`.</CardDescription>
+            <CardTitle>Manager Directory</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {managers.length ? (

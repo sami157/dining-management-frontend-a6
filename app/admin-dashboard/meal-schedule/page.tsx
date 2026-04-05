@@ -660,7 +660,7 @@ const MealSchedulePage = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Schedules for {selectedMonth}</CardTitle>
+          <CardTitle>Schedules For {selectedMonth}</CardTitle>
           <CardDescription>
             Edit meal weight, availability, and menu inline. Delete empty or mistaken schedule dates when needed.
           </CardDescription>

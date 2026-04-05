@@ -222,7 +222,7 @@ export default function HistoryPage() {
       <div className="mx-auto max-w-5xl space-y-8">
         <PageIntro
           eyebrow="Admin"
-          title="Month history"
+          title="Month History"
           description="Review locked and rolled-back month summaries after closeout."
         />
         <SectionEmptyState label="No month has been finalized yet." />
@@ -298,14 +298,14 @@ export default function HistoryPage() {
     <div className="mx-auto max-w-5xl space-y-8">
       <PageIntro
         eyebrow="Admin"
-        title="Month history"
+        title="Month History"
         description="Review locked and rolled-back month summaries, contribution ledgers, expense breakdowns, and meal registration totals after closeout."
       />
 
       <Card className="bg-card">
         <CardHeader className="gap-4">
           <div>
-            <CardTitle>Month history</CardTitle>
+            <CardTitle>Month History</CardTitle>
             <CardDescription>Switch between finalized and rolled-back months to inspect their status.</CardDescription>
           </div>
           <div className="max-w-xs">
@@ -359,7 +359,7 @@ export default function HistoryPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <HandCoins className="size-5" />
-              <span>Member contributions</span>
+              <span>Member Contributions</span>
             </CardTitle>
             <CardDescription>Read-only contribution totals for the selected finalized month.</CardDescription>
           </CardHeader>
@@ -386,7 +386,7 @@ export default function HistoryPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Lock className="size-5" />
-              <span>Closeout details</span>
+              <span>Closeout Details</span>
             </CardTitle>
             <CardDescription>Metadata captured when the month was locked.</CardDescription>
           </CardHeader>
@@ -428,7 +428,7 @@ export default function HistoryPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <ReceiptText className="size-5" />
-              <span>Expense categories</span>
+              <span>Expense Categories</span>
             </CardTitle>
             <CardDescription>How expenses were distributed across categories for the locked month.</CardDescription>
           </CardHeader>
@@ -452,7 +452,7 @@ export default function HistoryPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CalendarClock className="size-5" />
-              <span>Registration totals</span>
+              <span>Registration Totals</span>
             </CardTitle>
             <CardDescription>Read-only meal registration counts attributed to each member.</CardDescription>
           </CardHeader>

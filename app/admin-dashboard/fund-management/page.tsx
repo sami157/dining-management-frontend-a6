@@ -1000,7 +1000,7 @@ export default function FundManagementPage() {
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <Card>
           <CardHeader>
-            <CardTitle>Deposits for {formatMonthLabel(selectedMonth)}</CardTitle>
+            <CardTitle>Deposits For {formatMonthLabel(selectedMonth)}</CardTitle>
             <CardDescription>Member contributions and running monthly totals.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -1153,7 +1153,7 @@ export default function FundManagementPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Member contribution totals</CardTitle>
+            <CardTitle>Member Contribution Totals</CardTitle>
             <CardDescription>Quick month-level contribution view for active members.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -1181,7 +1181,7 @@ export default function FundManagementPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Expenses for {formatMonthLabel(selectedMonth)}</CardTitle>
+          <CardTitle>Expenses For {formatMonthLabel(selectedMonth)}</CardTitle>
           <CardDescription>Categorized spending entries for the active month.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

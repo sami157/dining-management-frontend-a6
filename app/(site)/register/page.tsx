@@ -53,7 +53,7 @@ export default function RegisterPage() {
     <main className="bg-shell flex flex-1 items-center justify-center px-6 py-16">
       <Card className="w-full max-w-lg border-white/60 bg-card/94">
         <CardHeader>
-          <CardTitle>Create account</CardTitle>
+          <CardTitle>Create Account</CardTitle>
           <CardDescription>
             This registers the Firebase user first, then syncs the app user profile to the backend.
           </CardDescription>
@@ -116,7 +116,7 @@ export default function RegisterPage() {
             </div>
 
             <Button className="w-full" type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Creating account..." : "Create account"}
+              {isSubmitting ? "Creating Account..." : "Create Account"}
             </Button>
           </form>
 

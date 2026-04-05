@@ -42,17 +42,17 @@ const features = [
 
 const processSteps = [
   {
-    title: "Register meals",
+    title: "Register Meals",
     description: "Members choose breakfast, lunch, and dinner meals before the deadline.",
     icon: UtensilsCrossed,
   },
   {
-    title: "Run operations",
+    title: "Run Operations",
     description: "Managers oversee schedules, registrations, deposits, and monthly operations.",
     icon: Clock3,
   },
   {
-    title: "Close the month",
+    title: "Close The Month",
     description: "Finalization locks the month and computes the operational meal rate from weighted usage.",
     icon: CheckCircle2,
   },
@@ -158,7 +158,7 @@ export default function HomePage() {
                 Dining Management
               </p>
               <h1 className="title-font max-w-3xl text-5xl tracking-tight text-foreground">
-                Web-based Solution for Managing Community Dinings that Just...Works
+                Web-Based Solution For Managing Community Dinings That Just...Works
               </h1>
               <p className="max-w-2xl text-base leading-8 text-muted-foreground">
                 Streamline your dining operations with a system designed for the full meal cycle,
@@ -180,7 +180,7 @@ export default function HomePage() {
                     <ArrowRight className="size-4" />
                   </Button>
                   <Button variant="outline" onClick={() => router.push("/register")}>
-                    Create account
+                    Create Account
                   </Button>
                 </>
               )}
@@ -272,7 +272,7 @@ export default function HomePage() {
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
               How It Works
             </p>
-            <h2 className="title-font text-3xl text-foreground">3 Steps from Meal Plan to Closeout</h2>
+            <h2 className="title-font text-3xl text-foreground">3 Steps From Meal Plan To Closeout</h2>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
             {processSteps.map((step) => {
@@ -300,7 +300,7 @@ export default function HomePage() {
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
               Core Capabilities
             </p>
-            <h2 className="title-font text-3xl text-foreground">Built for daily operations and monthly accountability</h2>
+            <h2 className="title-font text-3xl text-foreground">Built For Daily Operations And Monthly Accountability</h2>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
             {features.map((feature) => {
