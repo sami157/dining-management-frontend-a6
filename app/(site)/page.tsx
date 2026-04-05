@@ -9,7 +9,6 @@ import {
   Clock3,
   HandCoins,
   ShieldCheck,
-  Sparkles,
   Trophy,
   UtensilsCrossed,
   Users,

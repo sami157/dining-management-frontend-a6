@@ -135,15 +135,14 @@ const monthKeyToDate = (monthKey: string) => {
 
   return new Date(year, month - 1, 1);
 };
+const monthKeyToFirstDateKey = (monthKey: string) => `${monthKey}-01`;
 const dateKeyToDate = (dateKey: string) => {
   const [year, month, day] = dateKey.split("-").map(Number);
 
   return new Date(year, month - 1, day);
 };
 const dateToDateKey = (date: Date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+  const { year, month, day } = getDhakaDateParts(date);
 
   return `${year}-${month}-${day}`;
 };
@@ -212,14 +211,37 @@ const MealSchedulePage = () => {
 
   const createScheduleMutation = useMutation({
     mutationFn: createSchedule,
-    onSuccess: async () => {
+    onSuccess: async (_, variables) => {
       await syncSchedules();
-      setNewScheduleDate(getDhakaToday());
+      setNewScheduleDate(variables.date);
+      setSelectedMonth(variables.date.slice(0, 7));
       setCreateMealDrafts(createDefaultMealDrafts());
       toast.success("Schedule created.");
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : "Failed to create schedule.");
+    },
+  });
+  const repairScheduleMutation = useMutation({
+    mutationFn: async ({
+      scheduleId,
+      meals,
+    }: {
+      scheduleId: string;
+      meals: {
+        type: MealType;
+        weight: number;
+        menu?: string;
+        isAvailable: boolean;
+      }[];
+    }) => Promise.all(meals.map((meal) => addScheduledMeal(scheduleId, meal))),
+    onSuccess: async () => {
+      await syncSchedules();
+      setCreateMealDrafts(createDefaultMealDrafts());
+      toast.success("Missing meals added to the existing day.");
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Failed to repair schedule.");
     },
   });
 
@@ -355,6 +377,30 @@ const MealSchedulePage = () => {
 
     if (!meals.length) {
       toast.error("Enable at least one meal before creating a schedule.");
+      return;
+    }
+
+    const existingSchedule =
+      schedules.find((schedule) => getScheduleDateKey(schedule.date) === newScheduleDate) ?? null;
+
+    if (existingSchedule) {
+      const existingMealTypes = new Set(existingSchedule.meals.map((meal) => meal.type));
+      const missingMeals = meals
+        .filter((meal) => !existingMealTypes.has(meal.type))
+        .map((meal) => ({
+          ...meal,
+          ...(meal.menu ? { menu: meal.menu } : {}),
+        }));
+
+      if (!missingMeals.length) {
+        toast.error("The selected day already contains those meal types.");
+        return;
+      }
+
+      await repairScheduleMutation.mutateAsync({
+        scheduleId: existingSchedule.id,
+        meals: missingMeals,
+      });
       return;
     }
 
@@ -497,9 +543,13 @@ const MealSchedulePage = () => {
               <Button
                 type="button"
                 onClick={handleCreateSchedule}
-                disabled={createScheduleMutation.isPending}
+                disabled={createScheduleMutation.isPending || repairScheduleMutation.isPending}
               >
-                {createScheduleMutation.isPending ? <Spinner className="size-4" /> : <Plus />}
+                {createScheduleMutation.isPending || repairScheduleMutation.isPending ? (
+                  <Spinner className="size-4" />
+                ) : (
+                  <Plus />
+                )}
                 <span>Generate Day</span>
               </Button>
             </CardTitle>
@@ -529,7 +579,12 @@ const MealSchedulePage = () => {
                 captionLayout="dropdown"
                 selected={dateKeyToDate(newScheduleDate)}
                 onMonthChange={(date) => {
-                  setSelectedMonth(dateToDateKey(date).slice(0, 7));
+                  const nextMonth = dateToDateKey(date).slice(0, 7);
+
+                  setSelectedMonth(nextMonth);
+                  setNewScheduleDate((current) =>
+                    current.startsWith(nextMonth) ? current : monthKeyToFirstDateKey(nextMonth)
+                  );
                 }}
                 onSelect={(date) => {
                   if (!date) {
