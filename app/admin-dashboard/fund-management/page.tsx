@@ -39,6 +39,7 @@ import {
   updateDeposit,
   updateExpense,
 } from "@/lib/api/finance";
+import { getMonthlyStats } from "@/lib/api/stats";
 import { getUsers } from "@/lib/api/users";
 import { queryKeys } from "@/lib/query/keys";
 import { cn } from "@/lib/utils";
@@ -325,6 +326,10 @@ export default function FundManagementPage() {
     queryKey: ["finance", "expenses", selectedMonth],
     queryFn: () => getExpenses({ month: selectedMonth }),
   });
+  const monthlyStatsQuery = useQuery({
+    queryKey: ["stats", "monthly", selectedMonth],
+    queryFn: () => getMonthlyStats(selectedMonth),
+  });
 
   const finalizedMonthsQuery = useQuery({
     queryKey: ["finance", "finalized-months"],
@@ -348,6 +353,9 @@ export default function FundManagementPage() {
       queryClient.invalidateQueries({ queryKey: ["finance", "deposits"] }),
       queryClient.invalidateQueries({ queryKey: ["finance", "expenses"] }),
       queryClient.invalidateQueries({ queryKey: ["finance", "finalized-months"] }),
+      queryClient.invalidateQueries({ queryKey: ["stats", "monthly"] }),
+      queryClient.invalidateQueries({ queryKey: ["stats", "overview"] }),
+      queryClient.invalidateQueries({ queryKey: ["stats", "public"] }),
       queryClient.invalidateQueries({ queryKey: ["admin-schedules"] }),
       queryClient.invalidateQueries({ queryKey: ["member-registrations"] }),
       queryClient.invalidateQueries({ queryKey: queryKeys.myRegistrations }),
@@ -450,6 +458,7 @@ export default function FundManagementPage() {
     usersQuery.isPending ||
     depositsQuery.isPending ||
     expensesQuery.isPending ||
+    monthlyStatsQuery.isPending ||
     finalizedMonthsQuery.isPending
   ) {
     return <LoadingState label="Loading fund management..." />;
@@ -459,6 +468,7 @@ export default function FundManagementPage() {
     usersQuery.isError ||
     depositsQuery.isError ||
     expensesQuery.isError ||
+    monthlyStatsQuery.isError ||
     finalizedMonthsQuery.isError
   ) {
     return <LoadingState label="We couldn't load the fund management data." />;
@@ -477,6 +487,7 @@ export default function FundManagementPage() {
     .sort((left, right) => right.month.localeCompare(left.month));
   const selectedMonthFinalization = finalizedMonths.find((item) => item.month === selectedMonth) ?? null;
   const selectedMonthLocked = isMonthLocked(selectedMonthFinalization);
+  const monthlyStats = monthlyStatsQuery.data;
 
   const totalDeposits = selectedMonthDeposits.reduce((sum, deposit) => sum + toNumber(deposit.amount), 0);
   const totalExpenses = selectedMonthExpenses.reduce((sum, expense) => sum + toNumber(expense.amount), 0);
@@ -688,6 +699,27 @@ export default function FundManagementPage() {
               />
             </div>
 
+            {monthlyStats ? (
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <SummaryMetric
+                  label="Meals registered"
+                  value={String(monthlyStats.meals.totalMealsRegistered)}
+                />
+                <SummaryMetric
+                  label="Weighted meals"
+                  value={String(monthlyStats.meals.totalWeightedMeals)}
+                />
+                <SummaryMetric
+                  label="Schedule days"
+                  value={String(monthlyStats.meals.scheduleCount)}
+                />
+                <SummaryMetric
+                  label="Unique depositors"
+                  value={String(monthlyStats.deposits.uniqueDepositors)}
+                />
+              </div>
+            ) : null}
+
             <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
               <div className="rounded-xl bg-background p-4">
                 <div className="flex items-start justify-between gap-3">
@@ -719,6 +751,47 @@ export default function FundManagementPage() {
                 ))}
               </div>
             </div>
+
+            {monthlyStats ? (
+              <div className="rounded-xl bg-background p-4">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div>
+                    <p className="font-semibold text-lg text-foreground">Operational stats</p>
+                    <p className="text-sm text-muted-foreground">
+                      Backend monthly analytics from `/stats/monthly`.
+                    </p>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[28rem]">
+                    <div className="rounded-xl bg-muted px-4 py-3">
+                      <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Registration rows</p>
+                      <p className="mt-2 text-lg font-semibold text-foreground">
+                        {monthlyStats.meals.totalRegistrations}
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-muted px-4 py-3">
+                      <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Participants</p>
+                      <p className="mt-2 text-lg font-semibold text-foreground">
+                        {monthlyStats.meals.uniqueMembersWithRegistrations}
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-muted px-4 py-3">
+                      <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Available meals</p>
+                      <p className="mt-2 text-lg font-semibold text-foreground">
+                        {monthlyStats.meals.availableMealCount}
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-muted px-4 py-3">
+                      <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Meal rate</p>
+                      <p className="mt-2 text-lg font-semibold text-foreground">
+                        {monthlyStats.finalization.mealRate != null
+                          ? formatMoney(monthlyStats.finalization.mealRate)
+                          : "Not finalized"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
           </CardContent>
         </Card>
 

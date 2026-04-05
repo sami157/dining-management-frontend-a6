@@ -2,6 +2,12 @@ export const apiRoutes = {
   auth: {
     register: "/auth/register",
   },
+  stats: {
+    public: "/stats/public",
+    overview: "/stats/overview",
+    managers: "/stats/managers",
+    monthly: "/stats/monthly",
+  },
   users: {
     root: "/users",
     me: "/users/me",

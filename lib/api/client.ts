@@ -8,10 +8,12 @@ import type { ApiErrorResponse } from "@/lib/api/types";
 declare module "axios" {
   interface AxiosRequestConfig {
     suppressAuthToast?: boolean;
+    skipAuth?: boolean;
   }
 
   interface InternalAxiosRequestConfig {
     suppressAuthToast?: boolean;
+    skipAuth?: boolean;
   }
 }
 
@@ -30,6 +32,10 @@ const api = axios.create({
 
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
+    if (config.skipAuth) {
+      return config;
+    }
+
     const authHeader = await getAuthHeader();
 
     if (authHeader) {
