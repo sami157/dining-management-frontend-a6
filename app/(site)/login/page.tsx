@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Compass, LogIn } from "lucide-react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
@@ -26,9 +26,9 @@ type LoginFormValues = {
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { signIn, signInWithGoogle, refreshAppUser } = useAuth();
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [nextPath, setNextPath] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
@@ -39,11 +39,9 @@ export default function LoginPage() {
       password: "",
     },
   });
+  const nextPath = searchParams.get("next");
 
-  useEffect(() => {
-    const search = new URLSearchParams(window.location.search);
-    setNextPath(search.get("next"));
-  }, []);
+  const registerHref = nextPath ? `/register?next=${encodeURIComponent(nextPath)}` : "/register";
 
   async function handleSuccess() {
     const resolvedAppUser = await refreshAppUser();
@@ -76,7 +74,7 @@ export default function LoginPage() {
 
   return (
     <main className="bg-shell flex flex-1 items-center justify-center px-6 py-16">
-      <Card className="w-full max-w-md border-white/60 bg-card/94">
+      <Card className="w-full max-w-md border-white/60 bg-muted">
         <CardHeader>
           <CardTitle>Login</CardTitle>
           <CardDescription>
@@ -132,12 +130,14 @@ export default function LoginPage() {
             {googleLoading ? "Connecting..." : "Continue with Google"}
           </Button>
 
-          <p className="text-sm text-muted-foreground">
-            Need an account?{" "}
-            <Link href="/register" className="font-medium text-primary-foreground underline">
-              Register here
-            </Link>
-          </p>
+          <div className="space-y-3 border-t border-border pt-4">
+            <p className="text-center text-sm text-muted-foreground">
+              Need an account?
+            </p>
+            <Button asChild variant="outline" className="w-full">
+              <Link href={registerHref}>Go To Registration</Link>
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </main>

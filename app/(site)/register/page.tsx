@@ -1,7 +1,7 @@
 'use client'
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,7 @@ type RegisterFormValues = {
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { createUser } = useAuth();
   const {
     register,
@@ -38,6 +39,9 @@ export default function RegisterPage() {
       password: "",
     },
   });
+  const nextPath = searchParams.get("next");
+
+  const loginHref = nextPath ? `/login?next=${encodeURIComponent(nextPath)}` : "/login";
 
   async function onSubmit(values: RegisterFormValues) {
     try {
@@ -51,7 +55,7 @@ export default function RegisterPage() {
 
   return (
     <main className="bg-shell flex flex-1 items-center justify-center px-6 py-16">
-      <Card className="w-full max-w-lg border-white/60 bg-card/94">
+      <Card className="w-full max-w-lg border-white/60 bg-muted">
         <CardHeader>
           <CardTitle>Create Account</CardTitle>
           <CardDescription>
@@ -120,12 +124,14 @@ export default function RegisterPage() {
             </Button>
           </form>
 
-          <p className="mt-4 text-sm text-muted-foreground">
-            Already have an account?{" "}
-            <Link href="/login" className="font-medium text-primary-foreground underline">
-              Sign in
-            </Link>
-          </p>
+          <div className="mt-4 space-y-3 border-t border-border pt-4">
+            <p className="text-center text-sm text-muted-foreground">
+              Already have an account?
+            </p>
+            <Button asChild variant="outline" className="w-full">
+              <Link href={loginHref}>Go To Login</Link>
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </main>

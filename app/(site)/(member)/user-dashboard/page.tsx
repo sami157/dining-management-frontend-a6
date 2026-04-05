@@ -305,7 +305,7 @@ const UserDashboardPage = () => {
               Select Date
             </p>
           </div>
-          <Calendar className="w-full p-4 rounded-2xl bg-muted"
+          <Calendar className="max-w-[60vw] mx-auto p-4 rounded-2xl bg-muted"
             mode="single"
             month={monthKeyToDate(selectedMonth)}
             captionLayout="dropdown"
