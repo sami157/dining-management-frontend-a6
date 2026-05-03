@@ -6,7 +6,6 @@ import { ChevronDown, LayoutDashboard, LogOut, SunMoon, UserRound } from "lucide
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { getDashboardRoute } from "@/lib/auth/routes";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/AuthProvider";
 import { useTheme } from "@/providers/ThemeProvider";
@@ -48,23 +47,10 @@ export function SiteHeader() {
     ? [
         ...sharedSignedInLinks,
         ...(hasAdminDashboardAccess
-          ? [
-              { href: "/admin-dashboard", label: "Manager Dashboard" },
-              { href: "/user-dashboard", label: "My Dashboard" },
-            ]
-          : [
-              {
-                href: getDashboardRoute(appUser?.role),
-                label:
-                  appUser?.role === "ADMIN" || appUser?.role === "MANAGER"
-                    ? "Dashboard"
-                    : "My Dashboard",
-              },
-            ]),
-        { href: "/user-profile", label: "Profile" },
+          ? [{ href: "/admin-dashboard", label: "Manager Dashboard" }]
+          : []),
       ]
     : guestLinks;
-  const dashboardRoute = getDashboardRoute(appUser?.role);
   const displayName = appUser?.name ?? user?.displayName ?? "Dining User";
   const displayEmail = appUser?.email ?? user?.email ?? "";
 
@@ -162,11 +148,11 @@ export function SiteHeader() {
                     className="cursor-pointer justify-start gap-2 hover:bg-primary/10 hover:text-primary"
                     onClick={() => {
                       setProfileMenuOpen(false);
-                      router.push(dashboardRoute);
+                      router.push("/user-dashboard");
                     }}
                   >
                     <LayoutDashboard className="size-4" />
-                    Dashboard
+                    My Dashboard
                   </Button>
                   <Button
                     variant="ghost"

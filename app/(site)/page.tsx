@@ -4,13 +4,19 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight,
+  CalendarDays,
   CalendarClock,
   CheckCircle2,
   Clock3,
+  FileText,
   HandCoins,
+  LockKeyhole,
+  RefreshCw,
+  Settings2,
   ShieldCheck,
   Trophy,
   UtensilsCrossed,
+  UserRoundCheck,
   Users,
   Wallet,
 } from "lucide-react";
@@ -54,6 +60,57 @@ const processSteps = [
     title: "Close The Month",
     description: "Finalization locks the month and computes the operational meal rate from weighted usage.",
     icon: CheckCircle2,
+  },
+];
+
+const memberExperience = [
+  "Browse meal schedules by date.",
+  "Book breakfast, lunch, and dinner before deadlines.",
+  "Update meal counts while registration is still open.",
+];
+
+const managerOperations = [
+  "Generate daily or monthly schedules.",
+  "Repair missing meal slots and update menus.",
+  "Review member registrations from one place.",
+];
+
+const financeWorkflow = [
+  "Track member deposits by month.",
+  "Record bazar, gas, transport, and other expenses.",
+  "Compare deposits, expenses, balances, and meal usage.",
+];
+
+const deadlineControls = [
+  "Configure meal-specific registration deadlines.",
+  "Use weekly templates to speed up schedule creation.",
+  "Keep unavailable meals and closed deadlines clear in the UI.",
+];
+
+const accessControls = [
+  "Members only manage their own dining activity.",
+  "Managers control schedules, registrations, and finance.",
+  "Admins can manage roles and protected rollback actions.",
+];
+
+const closeoutWorkflow = [
+  "Finalize a completed month.",
+  "Preserve month-level finance and meal history.",
+  "Rollback finalized months when admin review requires it.",
+];
+
+const faqs = [
+  {
+    question: "Can Members Cancel Meals?",
+    answer: "Yes. Members can cancel or update registrations while the configured deadline allows it.",
+  },
+  {
+    question: "Can Managers Generate a Full Month?",
+    answer: "Yes. Weekly templates can be used to generate a complete month of meal schedules.",
+  },
+  {
+    question: "Does Finance Data Use Live Backend Records?",
+    answer: "Yes. Deposits, expenses, stats, and finalization data are loaded through the backend API.",
   },
 ];
 
@@ -130,6 +187,61 @@ function PublicMetric({
   );
 }
 
+function SectionHeading({
+  eyebrow,
+  title,
+  description,
+}: {
+  eyebrow: string;
+  title: string;
+  description?: string;
+}) {
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+        {eyebrow}
+      </p>
+      <h2 className="title-font text-3xl text-foreground">{title}</h2>
+      {description ? (
+        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{description}</p>
+      ) : null}
+    </div>
+  );
+}
+
+function ChecklistSection({
+  eyebrow,
+  title,
+  description,
+  icon: Icon,
+  items,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>;
+  items: string[];
+}) {
+  return (
+    <section className="grid gap-5 rounded-xl border border-border bg-card p-6 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
+      <div className="space-y-4">
+        <div className="flex size-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <Icon className="size-5" />
+        </div>
+        <SectionHeading eyebrow={eyebrow} title={title} description={description} />
+      </div>
+      <div className="grid gap-3">
+        {items.map((item) => (
+          <div key={item} className="flex items-start gap-3 rounded-lg bg-muted px-4 py-3">
+            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
+            <p className="text-sm leading-6 text-muted-foreground">{item}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export default function HomePage() {
   const router = useRouter();
   const { user, appUser } = useAuth();
@@ -164,7 +276,7 @@ export default function HomePage() {
             <div className="flex flex-wrap gap-3">
               {user ? (
                 <Button onClick={() => router.push(getDashboardRoute(appUser?.role))}>
-                  Open dashboard
+                    Open Dashboard
                   <ArrowRight className="size-4" />
                 </Button>
               ) : (
@@ -183,12 +295,11 @@ export default function HomePage() {
         </section>
 
         <section className="space-y-5">
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-              Stats
-            </p>
-            <h2 className="title-font text-3xl text-foreground">Live Monthly Snapshot</h2>
-          </div>
+          <SectionHeading
+            eyebrow="Stats"
+            title="Live Monthly Snapshot"
+            description="A public operational summary pulled from the current dining records."
+          />
           {publicStats ? (
             <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-4">
               <PublicMetric
@@ -254,6 +365,10 @@ export default function HomePage() {
                 }
               />
             </div>
+          ) : publicStatsQuery.isPending ? (
+            <div className="rounded-xl border border-dashed px-4 py-6 text-sm text-muted-foreground">
+              Loading public stats...
+            </div>
           ) : (
             <div className={cn("rounded-xl border border-dashed px-4 py-6 text-sm text-muted-foreground")}>
               Public stats could not be loaded: {publicStatsError ?? "Request failed."}
@@ -262,12 +377,11 @@ export default function HomePage() {
         </section>
 
         <section className="space-y-5">
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-              How It Works
-            </p>
-            <h2 className="title-font text-3xl text-foreground">3 Steps From Meal Plan To Closeout</h2>
-          </div>
+          <SectionHeading
+            eyebrow="How It Works"
+            title="3 Steps From Meal Plan to Closeout"
+            description="The app follows the same operational rhythm as a real shared dining setup."
+          />
           <div className="grid gap-4 md:grid-cols-3">
             {processSteps.map((step) => {
               const Icon = step.icon;
@@ -290,12 +404,11 @@ export default function HomePage() {
         </section>
 
         <section className="space-y-5">
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-              Core Capabilities
-            </p>
-            <h2 className="title-font text-3xl text-foreground">Built For Daily Operations And Monthly Accountability</h2>
-          </div>
+          <SectionHeading
+            eyebrow="Core Capabilities"
+            title="Built for Daily Operations and Monthly Accountability"
+            description="The main workflows are grouped around meals, access, and finance."
+          />
           <div className="grid gap-4 md:grid-cols-3">
             {features.map((feature) => {
               const Icon = feature.icon;
@@ -314,6 +427,105 @@ export default function HomePage() {
                 </Card>
               );
             })}
+          </div>
+        </section>
+
+        <ChecklistSection
+          eyebrow="Member Experience"
+          title="A Clear Flow for Meal Booking"
+          description="Members can see what is available and act before the deadline."
+          icon={UserRoundCheck}
+          items={memberExperience}
+        />
+
+        <ChecklistSection
+          eyebrow="Manager Operations"
+          title="Controls for Daily Dining Work"
+          description="Managers get focused tools for schedules, meals, and registrations."
+          icon={Settings2}
+          items={managerOperations}
+        />
+
+        <ChecklistSection
+          eyebrow="Finance Tracking"
+          title="Deposits and Expenses Stay Connected"
+          description="Finance records stay tied to month-level operations and member balances."
+          icon={HandCoins}
+          items={financeWorkflow}
+        />
+
+        <ChecklistSection
+          eyebrow="Deadline Control"
+          title="Rules That Match Meal Timing"
+          description="Deadline and template controls keep registration behavior predictable."
+          icon={CalendarDays}
+          items={deadlineControls}
+        />
+
+        <ChecklistSection
+          eyebrow="Access Control"
+          title="Separate Permissions by Role"
+          description="The interface changes based on whether the user is a member, manager, or admin."
+          icon={LockKeyhole}
+          items={accessControls}
+        />
+
+        <ChecklistSection
+          eyebrow="Month-End Workflow"
+          title="Close, Review, and Roll Back"
+          description="Month-end actions are built around traceable finance and meal summaries."
+          icon={RefreshCw}
+          items={closeoutWorkflow}
+        />
+
+        <section className="space-y-5">
+          <SectionHeading
+            eyebrow="FAQ"
+            title="Common Questions"
+            description="Short answers for the workflows users usually ask about first."
+          />
+          <div className="grid gap-4 md:grid-cols-3">
+            {faqs.map((faq) => (
+              <Card key={faq.question} className="h-full">
+                <CardHeader className="space-y-4">
+                  <div className="flex size-12 items-center justify-center rounded-[calc(var(--radius)+0.5rem)] bg-accent text-accent-foreground">
+                    <FileText className="size-5" />
+                  </div>
+                  <CardTitle className="text-xl">{faq.question}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm leading-6 text-muted-foreground">{faq.answer}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-xl border border-border bg-card px-6 py-8">
+          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+            <SectionHeading
+              eyebrow="Get Started"
+              title="Use the Dashboard Built for Your Role"
+              description="Sign in to manage meals as a member or operate the dining workflow as a manager."
+            />
+            <div className="flex flex-wrap gap-3">
+              {user ? (
+                <Button onClick={() => router.push(getDashboardRoute(appUser?.role))}>
+                  Open Dashboard
+                  <ArrowRight className="size-4" />
+                </Button>
+              ) : (
+                <>
+                  <Button onClick={() => router.push("/login")}>
+                    Login
+                    <ArrowRight className="size-4" />
+                  </Button>
+                  <Button variant="outline" onClick={() => router.push("/register")}>
+                    Create Account
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
         </section>
       </section>
