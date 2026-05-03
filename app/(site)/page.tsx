@@ -2,6 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import { Autoplay, Pagination } from "swiper/modules";
+import { Swiper, SwiperSlide } from "swiper/react";
 import {
   ArrowRight,
   CalendarDays,
@@ -26,6 +28,8 @@ import { getPublicStats } from "@/lib/api/stats";
 import { getDashboardRoute } from "@/lib/auth/routes";
 import { useAuth } from "@/providers/AuthProvider";
 import { cn } from "@/lib/utils";
+import "swiper/css";
+import "swiper/css/pagination";
 
 const features = [
   {
@@ -114,6 +118,30 @@ const faqs = [
   },
 ];
 
+const heroSlides = [
+  {
+    title: "Never Miss a Meal Deadline",
+    description:
+      "See upcoming meals, book your count, and make changes before the cutoff without asking someone to check a spreadsheet.",
+    benefit: "Book breakfast, lunch, and dinner with confidence.",
+    icon: CalendarClock,
+  },
+  {
+    title: "Know What Is Cooking Today",
+    description:
+      "Managers can publish menus, mark meals unavailable, and keep everyone aligned on the day’s dining plan.",
+    benefit: "Reduce confusion around menus and availability.",
+    icon: UtensilsCrossed,
+  },
+  {
+    title: "Understand Every Month's Cost",
+    description:
+      "Track deposits, expenses, weighted meals, and finalization so the monthly meal rate is easier to explain.",
+    benefit: "Make month-end accounting transparent.",
+    icon: Wallet,
+  },
+];
+
 
 const monthFormatter = new Intl.DateTimeFormat("en-US", {
   month: "long",
@@ -183,6 +211,58 @@ function PublicMetric({
           <Icon className="size-5" />
         </div>
       </div>
+    </div>
+  );
+}
+
+function HeroSlider() {
+  return (
+    <div className="min-w-0 w-full max-w-full overflow-hidden rounded-xl border border-border bg-card p-4 shadow-sm">
+      <Swiper
+        modules={[Autoplay, Pagination]}
+        autoplay={{ delay: 3600, disableOnInteraction: false }}
+        pagination={{ clickable: true }}
+        loop
+        className="hero-swiper h-full w-full max-w-full"
+      >
+        {heroSlides.map((slide) => {
+          const Icon = slide.icon;
+
+          return (
+            <SwiperSlide key={slide.title} className="max-w-full">
+              <div className="h-full min-h-80 rounded-lg bg-muted p-6">
+                <div className="flex h-full min-h-68 flex-col justify-between gap-8">
+                  <div className="space-y-5">
+                    <div className="flex size-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                      <Icon className="size-5" />
+                    </div>
+                    <div className="space-y-3">
+                      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                        Dining Made Clear
+                      </p>
+                      <h2 className="title-font text-3xl text-foreground">{slide.title}</h2>
+                      <p className="text-sm leading-7 text-muted-foreground">
+                        {slide.description}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3">
+                    <div className="rounded-lg bg-background px-4 py-3">
+                      <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                        Why It Matters
+                      </p>
+                      <p className="mt-1 text-sm font-semibold leading-5 text-foreground">
+                        {slide.benefit}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </SwiperSlide>
+          );
+        })}
+      </Swiper>
     </div>
   );
 }
@@ -258,7 +338,7 @@ export default function HomePage() {
     <main className="bg-shell flex-1">
       <section className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-16">
         <section className="grid gap-10 lg:grid-cols-[1.25fr_0.85fr] lg:items-center">
-          <div className="space-y-6">
+          <div className="min-w-0 space-y-6">
             <div className="space-y-3">
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
                 Dining Management
@@ -291,6 +371,9 @@ export default function HomePage() {
                 </>
               )}
             </div>
+          </div>
+          <div className="min-w-0">
+            <HeroSlider />
           </div>
         </section>
 

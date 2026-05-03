@@ -1,7 +1,6 @@
 Requirements Status Audit
 2. Not implemented, but quick or easy to add
 
-- Hero section needs a stronger interactive element such as a slider or animation. A CTA already exists.
 - Core listing/card section with image, title, short description, meta information, and a View Details button.
 - Listing cards need equal height, equal width, consistent border radius, and 4 cards per row on desktop.
 - Skeleton loader for listing cards while data is loading.

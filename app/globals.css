@@ -213,3 +213,34 @@ a[aria-current="page"]:hover {
     @apply font-sans;
   }
 }
+
+.hero-swiper {
+  padding-bottom: 2.25rem !important;
+  overflow: hidden;
+}
+
+.hero-swiper .swiper-wrapper,
+.hero-swiper .swiper-slide {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.hero-swiper .swiper-slide {
+  height: auto;
+}
+
+.hero-swiper .swiper-pagination {
+  bottom: 0 !important;
+}
+
+.hero-swiper .swiper-pagination-bullet {
+  width: 0.625rem;
+  height: 0.625rem;
+  background: var(--color-muted-foreground);
+  opacity: 0.35;
+}
+
+.hero-swiper .swiper-pagination-bullet-active {
+  background: var(--color-primary);
+  opacity: 1;
+}
