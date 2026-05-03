@@ -1,0 +1,22 @@
+Requirements Status Audit
+2. Not implemented, but quick or easy to add
+
+- Header or dashboard needs an advanced profile dropdown/profile menu.
+- Demo login button that auto-fills credentials.
+- Footer needs real working links, contact information, and social links.
+- Landing page needs at least 10 meaningful sections.
+- Hero section needs a stronger interactive element such as a slider or animation. A CTA already exists.
+- Core listing/card section with image, title, short description, meta information, and a View Details button.
+- Listing cards need equal height, equal width, consistent border radius, and 4 cards per row on desktop.
+- Skeleton loader for listing cards while data is loading.
+- Public details page.
+- Public listing/explore page.
+- Search bar on the listing/explore page.
+- Filtering by at least 2 fields on the listing/explore page.
+- Sorting options on the listing/explore page.
+- Pagination or infinite scroll on the listing/explore page.
+- Fully functional public listing filters.
+- Dashboard profile icon dropdown with Profile, Logout, and related actions.
+- Consistent filtering and pagination for all dashboard tables.
+- Basic charts that reflect real dynamic data.
+- Additional static pages such as About, Contact, Help, Privacy, or Terms.

@@ -11,8 +11,16 @@ import { useTheme } from "@/providers/ThemeProvider";
 
 const guestLinks = [
   { href: "/", label: "Home" },
+  { href: "/about", label: "About" },
   { href: "/login", label: "Login" },
   { href: "/register", label: "Register" },
+];
+
+const sharedSignedInLinks = [
+  { href: "/", label: "Home" },
+  { href: "/about", label: "About" },
+  { href: "/help", label: "Help" },
+  { href: "/contact", label: "Contact" },
 ];
 
 export function SiteHeader() {
@@ -25,7 +33,7 @@ export function SiteHeader() {
 
   const links = user
     ? [
-        { href: "/", label: "Home" },
+        ...sharedSignedInLinks,
         ...(hasAdminDashboardAccess
           ? [
               { href: "/admin-dashboard", label: "Manager Dashboard" },
