@@ -3,7 +3,7 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Compass, LogIn } from "lucide-react";
+import { Compass, LogIn, ShieldCheck, UserRound } from "lucide-react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
@@ -24,14 +24,31 @@ type LoginFormValues = {
   password: string;
 };
 
+const demoCredentials = [
+  {
+    label: "Demo User",
+    email: "user@dining.com",
+    password: "621082aA",
+    icon: UserRound,
+  },
+  {
+    label: "Demo Admin",
+    email: "manager@dining.com",
+    password: "621082aA",
+    icon: ShieldCheck,
+  },
+];
+
 function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { signIn, signInWithGoogle, refreshAppUser } = useAuth();
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [demoLoadingEmail, setDemoLoadingEmail] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
     defaultValues: {
@@ -43,9 +60,37 @@ function LoginPageContent() {
 
   const registerHref = nextPath ? `/register?next=${encodeURIComponent(nextPath)}` : "/register";
 
+  function fillDemoCredentials(email: string, password: string) {
+    setValue("email", email, {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true,
+    });
+    setValue("password", password, {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true,
+    });
+  }
+
   async function handleSuccess() {
     const resolvedAppUser = await refreshAppUser();
     router.replace(nextPath || getDashboardRoute(resolvedAppUser?.role));
+  }
+
+  async function loginWithDemoCredentials(email: string, password: string) {
+    fillDemoCredentials(email, password);
+    setDemoLoadingEmail(email);
+
+    try {
+      await signIn(email, password);
+      toast.success("Signed in with demo account.");
+      await handleSuccess();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Demo login failed.");
+    } finally {
+      setDemoLoadingEmail(null);
+    }
   }
 
   async function onSubmit(values: LoginFormValues) {
@@ -129,6 +174,34 @@ function LoginPageContent() {
             <Compass className="size-4" />
             {googleLoading ? "Connecting..." : "Continue with Google"}
           </Button>
+
+          <div className="rounded-lg border border-dashed border-primary/35 bg-background/70 p-4">
+            <div className="mb-3">
+              <p className="text-sm font-semibold text-foreground">Demo Access</p>
+              <p className="text-xs leading-5 text-muted-foreground">
+                Fill the form and sign in with a sample account.
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {demoCredentials.map((credential) => {
+                const Icon = credential.icon;
+
+                return (
+                  <Button
+                    key={credential.email}
+                    type="button"
+                    variant="outline"
+                    className="cursor-pointer justify-start gap-2 bg-card hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
+                    onClick={() => loginWithDemoCredentials(credential.email, credential.password)}
+                    disabled={isSubmitting || googleLoading || Boolean(demoLoadingEmail)}
+                  >
+                    <Icon className="size-4" />
+                    {demoLoadingEmail === credential.email ? "Signing In..." : credential.label}
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
 
           <div className="space-y-3 border-t border-border pt-4">
             <p className="text-center text-sm text-muted-foreground">

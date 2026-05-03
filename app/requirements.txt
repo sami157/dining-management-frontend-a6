@@ -1,8 +1,6 @@
 Requirements Status Audit
 2. Not implemented, but quick or easy to add
 
-- Header or dashboard needs an advanced profile dropdown/profile menu.
-- Demo login button that auto-fills credentials.
 - Footer needs real working links, contact information, and social links.
 - Landing page needs at least 10 meaningful sections.
 - Hero section needs a stronger interactive element such as a slider or animation. A CTA already exists.
